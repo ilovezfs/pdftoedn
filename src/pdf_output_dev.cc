@@ -1,0 +1,1126 @@
+#ifdef USE_GCC_PRAGMAS
+#pragma implementation
+#endif
+
+#include <Error.h>
+#include <Object.h>
+#include <GfxFont.h>
+#include <Page.h>
+#include <UTF.h>
+
+#include "pdf_output_dev.h"
+#include "font_engine.h"
+#include "doc_page.h"
+#include "color.h"
+#include "graphics.h"
+#include "util_encode.h"
+#include "util_xform.h"
+#include "edsel_options.h"
+
+// debug
+//#define ENABLE_OP_TRACE            // dump traces to show op order
+//#define ENABLE_PAGE_MARKER
+//#define ENABLE_OP_TRACE_TEXT
+//#define ENABLE_OP_TRACE_IMG
+
+// trace sub options
+#ifdef ENABLE_OP_TRACE_TEXT
+//#define ENABLE_OP_TRACE_TEXT_VERBOSE
+#endif
+
+//#define ENABLE_IMG_DUMP_TO_DISK    // dump images to desktop
+
+#define DBG_TRACE(t)
+#define DBG_TRACE_TXT(t)
+#define DBG_TRACE_IMG(t)
+#if defined(ENABLE_PAGE_MARKER) || defined(ENABLE_OP_TRACE) || defined(ENABLE_OP_TRACE_TEXT) || defined(ENABLE_OP_TRACE_IMG)
+#include <iostream>
+#include <iomanip>
+#include "util.h"
+#include "util_debug.h"
+ #ifdef ENABLE_OP_TRACE
+  #undef DBG_TRACE
+  #define DBG_TRACE(t) t
+ #endif
+ #ifdef ENABLE_OP_TRACE_TEXT
+  #undef DBG_TRACE_TXT
+  #define DBG_TRACE_TXT(t) t
+ #endif
+ #ifdef ENABLE_OP_TRACE_IMG
+  #undef DBG_TRACE_IMG
+  #define DBG_TRACE_IMG(t) t
+ #endif
+#endif
+
+#ifdef ENABLE_IMG_DUMP_TO_DISK
+  #define DUMP_IMG(basename) util::debug::save_blob_to_disk(blob, basename "-a", ref_num); \
+                             if (xformed_blob.str().length() > 0) {                        \
+                                 util::debug::save_blob_to_disk( xformed_blob, basename "-x", ref_num); \
+                             }
+#else
+  #define DUMP_IMG(basename)
+#endif
+
+
+namespace pdftoedn
+{
+    //------------------------------------------------------------------------
+    // pdftoedn::OutputDev
+    //------------------------------------------------------------------------
+
+    //
+    // begin page processing
+    // poppler >= 0.24.0 added the xref parameter to startPage
+    void OutputDev::startPage(int pageNum, GfxState *state, XRef *xref)
+    {
+#ifdef ENABLE_PAGE_MARKER
+        std::cerr << " + ===== " << __FUNCTION__ << " - page " << (pageNum - 1)<< " ===== + " << std::endl;
+#endif
+
+        int w, h, rot;
+
+        // set up graphics output for page
+        if (state) {
+            // setup HTML output for page
+            setDefaultCTM( state->getCTM() );
+
+            w = (int)(state->getPageWidth() + 0.5);
+            if (w <= 0) {
+                w = 1;
+            }
+            h = (int)(state->getPageHeight() + 0.5);
+            if (h <= 0) {
+                h = 1;
+            }
+
+            updateCTM(state, 0, 0, 0, 0, 0, 0);
+
+            rot = state->getRotate();
+        } else {
+            w = h = 1;
+            rot = 0;
+        }
+
+        // allocate a new page in the collector doc. and register the
+        // error callback
+        if (page_out) {
+            delete page_out;
+        }
+        page_out = new pdftoedn::PdfPage(pageNum, w, h, rot);
+
+        // finally, update the xref pointer with the font engine
+        if (xref) {
+            font_engine.update_document_ref(xref);
+        }
+
+        // and extract the page links - we used to do this at the end
+        // of the page but now need the links first to check if a
+        // text span must be split because of a link
+        process_page_links( pageNum );
+    }
+
+    //
+    //
+    // actions to perform once page processing is complete
+    void OutputDev::endPage()
+    {
+        DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
+
+        // close page collection
+        page_out->finalize();
+    }
+
+    //
+    // state save & restore
+    void OutputDev::saveState(GfxState* state)
+    {
+        DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
+
+        page_out->push_gfx_state();
+    }
+
+    void OutputDev::restoreState(GfxState* state)
+    {
+        DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
+
+        page_out->pop_gfx_state();
+    }
+
+
+    //
+    //  Text and Font processing
+    //
+    void OutputDev::updateFont(GfxState *state)
+    {
+        GfxFont *gfx_font = state->getFont();
+        if (!gfx_font) {
+            return;
+        }
+
+        // sanity-check the font size
+        if (EngOutputDev::state_font_size_not_sane(state)) {
+            return;
+        }
+
+        // load / update the current font
+        PdfFont* font = font_engine.load_font(gfx_font);
+
+        if (!font) {
+            // error - font engine will report cause
+            return;
+        }
+
+        DBG_TRACE_TXT(std::cerr << __FUNCTION__ << " - name: " << font->name() << ", family: " << font->family()
+                                << " (" << util::debug::get_font_type_str(gfx_font->getType()) << ")"
+                                << std::endl);
+
+        // matrix manipulation to compensate for rotated pages -
+        // compute the product of the state and text matrices.
+        double* ctma = state->getCTM();
+        double* txta = state->getTextMat();
+        text_tm = PdfTM(txta[0] * ctma[0] + txta[1] * ctma[2],
+                        -(txta[0] * ctma[1] + txta[1] * ctma[3]),
+                        txta[2] * ctma[0] + txta[3] * ctma[2],
+                        -(txta[2] * ctma[1] + txta[3] * ctma[3]),
+                        0, 0);
+
+        // add the font instance w/ associated (rounded) size to the current page
+        page_out->update_font( font, EngOutputDev::get_transformed_font_size(state) );
+    }
+
+
+    //
+    // text callbacks
+    //
+
+    //
+    // new character to be 'drawn'
+    void OutputDev::drawChar(GfxState *state, double x, double y,
+                             double dx, double dy,
+                             double originX, double originY,
+                             CharCode code, int nBytes,
+                             Unicode *u, int uLen)
+    {
+        DBG_TRACE_TXT(std::cerr << __FUNCTION__ << " ");
+
+        // we usually want to ignore non-marking text but some OCR'd
+        // PDFs carry text data this way so we've added an option to
+        // allow processing
+        bool invisible = (state->getRender() == util::TEXT_RENDER_INVISIBLE);
+        if (!pdftoedn::options.include_invisible_text() && invisible) {
+            return;
+        }
+
+        if (state->getStrokeColorSpace()->isNonMarking()) {
+            return;
+        }
+
+        x -= originX;
+        y -= originY;
+
+        // coordinate transform
+        double x1, y1, w1, h1, dx2, dy2;
+        state->transform(x, y, &x1, &y1);
+        state->textTransformDelta(state->getCharSpace() * state->getHorizScaling(), 0, &dx2, &dy2);
+        dx -= dx2;
+        dy -= dy2;
+        state->transformDelta(dx, dy, &w1, &h1);
+
+        // try to do any re-mapping, if applicable
+        size_t glyph_idx = -1;
+        uintmax_t unicode;
+
+        FontEngine::eCodeRemapStatus status;
+
+        // if there's pending actual text, use the cached unicode
+        // value instead of what we receive here
+        if (!actual_text.empty()) {
+            Unicode at_u = actual_text.front();
+            actual_text.pop();
+            status = font_engine.get_code_unicode(code, &at_u, unicode);
+        }
+        else {
+            status = font_engine.get_code_unicode(code, u, unicode);
+        }
+
+        switch (status) {
+          case FontEngine::CODE_REMAP_IGNORE:
+          case FontEngine::CODE_REMAP_ERROR:
+              return;
+              break;
+          default:
+              break;
+        }
+
+#ifdef ENABLE_OP_TRACE_TEXT
+#ifdef ENABLE_OP_TRACE_TEXT_VERBOSE
+        if (
+            !text_tm.is_rotated()
+            //            && string("HGMaruGothicMPRO") == state->getFont()->getName()->getCString()
+            ) {
+            std::cerr << "\t'"
+                 << (char) code << "' (" << (int) code << "), u? " << (u != NULL ? *u : 0)
+                 << ", returned unicode: '" << (char) unicode << "' (" << unicode << ") *u? " << (u?*u:0);
+                //                 << " - bbox: " << BoundingBox(x1, y1, w1, h1)
+                //                 << "\tx, y: " << x << " " << y << ", w: " << w1 << ", h: " << h1 << std::endl
+                //                 << "  state rot: " << PdfTM(state->getCTM()).rotation_deg() << "°" << std::endl
+                //                 << "  text rot:  " << PdfTM(state->getTextMat()).rotation_deg() << "°" << std::endl
+                //                 << "  rslt rot:  " << text_tm.rotation_deg() << "°"
+                //                 << ", font: " << state->getFont()->getName()->getCString()
+                //                 << ", ch sp * scaling: " << state->getCharSpace() * state->getHorizScaling()
+                //                 << ", xformed font size: " <<  state->getTransformedFontSize()
+                //                 << "\ttext CTM: " << std::endl << text_tm
+        }
+#endif
+        std::cerr << std::endl;
+#endif
+
+        // add the character
+        page_out->new_character( x1, y1, w1, h1,
+                                 text_tm,
+                                 TextMetrics( state->getLeading(),
+                                              state->getRise(),
+                                              state->getCharSpace(),
+                                              state->getHorizScaling() ),
+                                 unicode,
+                                 glyph_idx,
+                                 invisible );
+    }
+
+
+    //
+    // capture instances of the Actual Text command - these are used
+    // so a PDF viewer shows different text from what's encoded. We
+    // cache the unicode values and then substitute them when
+    // characters come in
+    void OutputDev::beginActualText(GfxState* state, GooString *text )
+    {
+        if (state->getStrokeColorSpace()->isNonMarking()) {
+            return;
+        }
+
+        Unicode *uni = NULL;
+        int length = TextStringToUCS4(text, &uni);
+
+#ifdef ENABLE_OP_TRACE
+        wchar_t c[2] = { 0, 0 };
+        std::wstring s;
+
+        std::cerr << __FUNCTION__;
+#endif
+
+        // store the unicode values
+        for (int i = 0; i < length; i++) {
+            actual_text.push(uni[i]);
+#ifdef ENABLE_OP_TRACE
+            c[0] = uni[i];
+            s += c;
+#endif
+        }
+
+        DBG_TRACE(std::cerr << " - " << util::string_to_utf(s) << std::endl);
+
+        if (uni) {
+            gfree(uni);
+        }
+    }
+
+    //
+    // path drawing
+    //
+
+    //
+    // stroke
+    void OutputDev::stroke(GfxState *state)
+    {
+        if (state->getStrokeColorSpace()->isNonMarking()) {
+            return;
+        }
+
+        DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
+
+        build_path_command(state, PdfDocPath::STROKE);
+    }
+
+    //
+    // fills
+    void OutputDev::fill(GfxState *state)
+    {
+        if (state->getFillColorSpace()->isNonMarking()) {
+            return;
+        }
+
+        DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
+
+        build_path_command(state, PdfDocPath::FILL);
+    }
+
+    //
+    // even-odd fills
+    void OutputDev::eoFill(GfxState *state)
+    {
+        if (state->getFillColorSpace()->isNonMarking()) {
+            return;
+        }
+
+        DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
+
+        build_path_command(state, PdfDocPath::FILL, PdfDocPath::EVEN_ODD_RULE_ENABLED);
+    }
+
+    //
+    // tiled patterns
+    GBool OutputDev::tilingPatternFill(GfxState* state, Gfx* gfx, Catalog* cat, Object* str,
+                                       double* pmat, int paintType, int tilingType, Dict* resDict,
+                                       double* mat, double* bbox,
+                                       int x0, int y0, int x1, int y1,
+                                       double xStep, double yStep)
+    {
+        DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
+
+        // TESLA-5735 - don't do anything for now as it's not
+        // crucial. However, adding this prevents poppler from
+        // entering an infinite loop with certain docs
+        return gTrue;
+    }
+
+    //
+    // clip paths
+    void OutputDev::clip(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
+
+        build_path_command(state, PdfDocPath::CLIP);
+    }
+
+    //
+    // even-odd clip paths
+    void OutputDev::eoClip(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
+
+        build_path_command(state, PdfDocPath::CLIP, PdfDocPath::EVEN_ODD_RULE_ENABLED);
+    }
+
+    //
+    // ??
+    void OutputDev::clipToStrokePath(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        //        buildClippedPathCommand(state, PdfPath::CLIP_TO_STROKE);
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+
+
+    //
+    // Images
+    //
+
+    //
+    // 1-bit rasters
+    void OutputDev::drawImageMask(GfxState *state, Object *obj, Stream *str,
+                                  int width, int height, GBool invert, GBool interpolate,
+                                  GBool inlined)
+    {
+        DBG_TRACE_IMG(std::cerr << "===========================" << std::endl << __FUNCTION__);
+
+        if (state->getFillColorSpace()->isNonMarking()) {
+            return;
+        }
+
+        // check matrix is valid
+        PdfTM ctm(state->getCTM());
+        if (!ctm.is_finite()) {
+            et.log_warn( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+                         "drawImageMask - mask has non-finite CTM" );
+            return;
+        }
+
+        int ref_num;
+        if (inlined) {
+            // inline images don't carry a resource id so the cache
+            // lookup will fail every time. Unfortunately, we have to
+            // processed the stream data every time and check if the
+            // generated image is then cache by its MD5
+            ref_num = inline_img_id;
+        }
+        else if (obj && obj->isRef()) {
+            ref_num = obj->getRef().num;
+        }
+        else {
+            // this should never happen except, knowing poppler, it's
+            // only a matter of time
+            return;
+        }
+
+        BoundingBox bbox(ctm);
+
+        // lookup the object id to see if we've cached it already
+        if (!page_out->image_is_cached(ref_num))
+        {
+            // poppler's interface to rip through a stream for an image
+            ImageStream *imgStr = new ImageStream(str, width, 1, 1);
+
+            // get the fill color of the mask
+            GfxRGB fill;
+            state->getFillRGB(&fill);
+
+            DBG_TRACE_IMG( std::cerr << " - stream kind: '" << util::debug::get_stream_kind_str(str->getKind())
+                                     << "', w: " << width << ", h: " << height << std::endl
+                                     << std::boolalpha << "\tinterpol: " << interpolate
+                                     << ", inline: " << inlined
+                                     << ", inv: " << invert << std::endl
+                                     << "\tctm: " << std::endl << PdfTM(state->getCTM()) << std::endl
+                                     << "\tfill: ("
+                                     << (int) colToByte(fill.r) << ", " << (int) colToByte(fill.g) << ", " << (int) colToByte(fill.b)
+                                     << "), cs: " << GfxColorSpace::getColorSpaceModeName(state->getFillColorSpace()->getMode()) << std::endl);
+
+            // set up stream properties
+            StreamProps properties(util::poppler_stream_type_to_edsel(str->getKind()),
+                                   width, height,
+                                   fill, state->getFillColorSpace()->getMode(),
+                                   interpolate, ctm.is_upside_down(), inlined, invert);
+
+            // extract the data and copy it to a string stream
+            std::ostringstream blob, xformed_blob;
+            uint8_t transformed = util::xform::XFORM_NONE;
+
+            util::encode::encode_mask(blob, imgStr, width, height, properties);
+
+            // poppler cleanup
+            delete imgStr;
+            str->close();
+
+            // handle transformations if needed
+            if (ctm.is_transformed()) {
+                // use leptonica to transform the image
+                transformed = util::xform::transform_image(ctm, blob.str(), width, height, invert, xformed_blob);
+            }
+
+            // cache it. If inlined, PdfPage will search to make sure
+            // an image w/ same md5 is not already in the DB and
+            // return it's ref_num instead of caching it again.
+            // Otherwise, the same ref_num is returned
+            intmax_t cached_ref_num;
+            if (!page_out->cache_image(ref_num, bbox, width, height, properties,
+                                       (transformed ? xformed_blob.str() : blob.str()),
+                                       cached_ref_num)) {
+                // error caching image
+                return;
+            }
+
+            if (inlined && cached_ref_num == ref_num){
+                inline_img_id -= 1;
+            }
+            ref_num = cached_ref_num;
+
+            DUMP_IMG("img_mask");
+        }
+        DBG_TRACE_IMG(
+        else {
+            std::cerr << "\tCached image id: " << ref_num << std::endl;
+        }
+                      );
+
+        // add a meta container for the image
+        page_out->new_image(ref_num, bbox);
+    }
+
+
+    //
+    // bitmap + mask - implemented using PNG w/ alpha channel
+    void OutputDev::drawSoftMaskedImage(GfxState *state, Object *obj, Stream *str,
+                                        int width, int height,
+                                        GfxImageColorMap *colorMap,
+                                        GBool interpolate,
+                                        Stream *maskStr,
+                                        int maskWidth, int maskHeight,
+                                        GfxImageColorMap *maskColorMap,
+                                        GBool maskInterpolate)
+    {
+        if (!maskColorMap) {
+            return;
+        }
+
+        if (state->getFillColorSpace()->isNonMarking()) {
+            return;
+        }
+
+
+        DBG_TRACE_IMG(std::cerr << __FUNCTION__ << std::dec << std::endl
+                               << "    img w: " << width << ", h: " << height << std::endl
+                               << "           c-space: " << GfxColorSpace::getColorSpaceModeName(colorMap->getColorSpace()->getMode())
+                               << ", num pix comp: " << colorMap->getNumPixelComps()
+                               << ", bpp: " << colorMap->getBits()
+                               << std::endl
+                               << "    mask w: " << maskWidth << ", h: " << maskHeight << std::endl
+                               << "      mask c-space: " << GfxColorSpace::getColorSpaceModeName(maskColorMap->getColorSpace()->getMode())
+                               << ", num pix comp: " << maskColorMap->getNumPixelComps()
+                               << ", bpp: " << maskColorMap->getBits()
+                               << std::endl);
+
+        // check matrix is valid
+        PdfTM ctm(state->getCTM());
+        if (!ctm.is_finite()) {
+            et.log_info( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+                         "drawSoftMaskedImage - mask has non-finite CTM" );
+            return;
+        }
+
+        intmax_t ref_num = obj->getRef().num;
+        BoundingBox bbox(ctm);
+
+        // lookup the object id to see if we've cached it already
+        if (!page_out->image_is_cached(ref_num))
+        {
+            int num_pix_comps = colorMap->getNumPixelComps();
+            int bpp = colorMap->getBits();
+            StreamProps properties(util::poppler_stream_type_to_edsel(str->getKind()),
+                                   width, height, num_pix_comps, bpp, interpolate,
+                                   util::poppler_stream_type_to_edsel(maskStr->getKind()),
+                                   maskWidth, maskHeight,
+                                   maskColorMap->getNumPixelComps(), maskColorMap->getBits(), maskInterpolate,
+                                   ctm.is_upside_down());
+
+            // poppler's interface to rip through a stream for an image
+            ImageStream *imgStr = new ImageStream(str, width, num_pix_comps, bpp);
+            ImageStream *maskImgStr = new ImageStream(maskStr, maskWidth,
+                                                      maskColorMap->getNumPixelComps(),
+                                                      maskColorMap->getBits());
+
+            // image data will be written here
+            std::ostringstream blob, xformed_blob;
+            uint8_t transformed = util::xform::XFORM_NONE;
+
+            util::encode::encode_rgba_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap,
+                                            maskImgStr, maskWidth, maskHeight, maskColorMap->getNumPixelComps(), maskColorMap->getBits(), maskColorMap,
+                                            false);
+
+            // poppler cleanup
+            delete maskImgStr;
+            delete imgStr;
+            str->close();
+
+            // handle transformations if needed
+            if (ctm.is_transformed()) {
+                transformed = util::xform::transform_image(ctm, blob.str(), width, height, false, xformed_blob);
+            }
+
+            // cache it.
+            if (!page_out->cache_image(ref_num, bbox, width, height, properties,
+                                       (transformed ? xformed_blob.str() : blob.str()),
+                                       ref_num)) {
+                return;
+            }
+
+            DUMP_IMG("softmasked_img");
+        }
+
+        // add a meta container for the image
+        page_out->new_image(ref_num, bbox);
+    }
+
+
+    //
+    // not yet implemented
+    void OutputDev::setSoftMaskFromImageMask(GfxState *state,
+                                             Object *ref, Stream *str,
+                                             int width, int height, GBool invert,
+                                             GBool inlineImg, double *baseMatrix)
+    {
+        DBG_TRACE_IMG(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+    void OutputDev::unsetSoftMaskFromImageMask(GfxState *state, double *baseMatrix)
+    {
+        DBG_TRACE_IMG(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        //        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+    void OutputDev::drawMaskedImage(GfxState *state, Object *obj, Stream *str,
+                                    int width, int height,
+                                    GfxImageColorMap *colorMap, GBool interpolate,
+                                    Stream *maskStr, int maskWidth, int maskHeight,
+                                    GBool maskInvert, GBool maskInterpolate)
+    {
+        DBG_TRACE_IMG(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        if (!maskStr) {
+            return;
+        }
+
+        if (state->getFillColorSpace()->isNonMarking()) {
+            return;
+        }
+
+        // check matrix is valid
+        PdfTM ctm(state->getCTM());
+        if (!ctm.is_finite()) {
+            et.log_info( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+                         "drawSoftMaskedImage - mask has non-finite CTM" );
+            return;
+        }
+
+        intmax_t ref_num = obj->getRef().num;
+        BoundingBox bbox(ctm);
+
+        // lookup the object id to see if we've cached it already
+        if (!page_out->image_is_cached(ref_num))
+        {
+            int num_pix_comps = colorMap->getNumPixelComps();
+            int bpp = colorMap->getBits();
+            StreamProps properties(util::poppler_stream_type_to_edsel(str->getKind()), width, height,
+                                   num_pix_comps, bpp, interpolate,
+                                   util::poppler_stream_type_to_edsel(maskStr->getKind()), maskWidth, maskHeight,
+                                   ctm.is_upside_down(), maskInterpolate, maskInvert);
+
+            DBG_TRACE_IMG(std::cerr << std::dec
+                                    << "\timg w: " << width << ", h: " << height
+                                    << ", cspace: " << GfxColorSpace::getColorSpaceModeName(colorMap->getColorSpace()->getMode())
+                                    << ", pix_comps: " << num_pix_comps << ", bpp: " << bpp
+                                    << ", interpolate: " << interpolate << std::endl
+                                    << "\tmask w: " << maskWidth << ", h: " << maskHeight
+                                    << ", mask invert: " << maskInvert << ", mask interpolate: " << maskInterpolate
+                                    << std::endl);
+
+            // poppler's interface to rip through a stream for an image
+            ImageStream *imgStr = new ImageStream(str, width, num_pix_comps, bpp);
+            ImageStream *maskImgStr = new ImageStream(maskStr, maskWidth, 1, 1);
+
+            // image data will be written here
+            std::ostringstream blob, xformed_blob;
+            uint8_t transformed = util::xform::XFORM_NONE;
+
+            util::encode::encode_rgba_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap,
+                                            maskImgStr, maskWidth, maskHeight, 1, 1, NULL,
+                                            maskInvert);
+
+            // poppler cleanup
+            delete maskImgStr;
+            delete imgStr;
+            str->close();
+
+            // handle transformations if needed
+            if (ctm.is_transformed()) {
+                transformed = util::xform::transform_image(ctm, blob.str(), width, height, maskInvert, xformed_blob);
+            }
+
+            // cache it.
+            if (!page_out->cache_image(ref_num, bbox, width, height, properties,
+                                       (transformed ? xformed_blob.str() : blob.str()),
+                                       ref_num)) {
+                return;
+            }
+
+            DUMP_IMG("masked_img");
+        }
+
+        // add a meta container for the image
+        page_out->new_image(ref_num, bbox);
+    }
+
+
+    //
+    // image handling
+    void OutputDev::drawImage(GfxState *state, Object *obj, Stream *str,
+                              int width, int height, GfxImageColorMap *colorMap,
+                              GBool interpolate, int *maskColors, GBool inlined)
+    {
+        if (state->getFillColorSpace()->isNonMarking()) {
+            return;
+        }
+
+        DBG_TRACE_IMG(std::cerr << __FUNCTION__
+                                << " - stream kind: " << util::debug::get_stream_kind_str(str->getKind())
+                                << " w: " << width << ", h: " << height
+                                << std::boolalpha << ", interpol: " << interpolate
+                                << ", inline: " << inlined << ", mask colors? " << (maskColors != NULL)
+                                << std::endl
+                                << " ctm: " << std::endl << PdfTM(state->getCTM())
+                                << std::endl);
+
+        // check matrix is valid
+        PdfTM ctm(state->getCTM());
+        if (!ctm.is_finite()) {
+            et.log_warn( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+                         "drawImage - masked image has non-finite CTM" );
+            return;
+        }
+
+        // get object reference id
+        int ref_num;
+        if (inlined) {
+            // inline images don't carry a resource id so the cache
+            // lookup will fail every time. Unfortunately, we have to
+            // processed the stream data every time and check if the
+            // generated image is then cache by its MD5
+            ref_num = inline_img_id;
+        }
+        else if (obj && obj->isRef()) {
+            ref_num = obj->getRef().num;
+        }
+        else {
+            // WTF!
+            return;
+        }
+
+        BoundingBox bbox(ctm);
+
+        // lookup the object id to see if we've cached it already
+        if (!page_out->image_is_cached(ref_num))
+        {
+            int num_pix_comps = colorMap->getNumPixelComps();
+            int bpp = colorMap->getBits();
+            StreamProps properties(util::poppler_stream_type_to_edsel(str->getKind()),
+                                   width, height, num_pix_comps, bpp,
+                                   interpolate, ctm.is_upside_down(), inlined);
+
+            // poppler's interface to rip through a stream for an image
+            ImageStream *imgStr = new ImageStream(str, width, num_pix_comps, bpp);
+
+            // image data will be written here
+            std::ostringstream blob, xformed_blob;
+            uint8_t transformed = util::xform::XFORM_NONE;
+
+            util::encode::encode_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap);
+
+            // poppler cleanup
+            delete imgStr;
+            str->close();
+
+            // handle transformations if needed
+            if (ctm.is_transformed()) {
+                transformed = util::xform::transform_image(ctm, blob.str(), width, height, false, xformed_blob);
+                //                std::cerr << "image transformed. adjusted bbox:" << std::endl << bbox << std::endl;
+            }
+
+            // cache it. If inlined, PdfPage will search to make sure
+            // an image w/ same md5 is not already in the DB and
+            // return it's ref_num instead of caching it again.
+            // Otherwise, the same ref_num is returned
+            intmax_t cached_ref_num;
+            if (!page_out->cache_image(ref_num, bbox, width, height, properties,
+                                       (transformed ? xformed_blob.str() : blob.str()),
+                                       cached_ref_num)) {
+                // error caching image
+                return;
+            }
+
+            if (inlined && cached_ref_num == ref_num){
+                inline_img_id -= 1;
+            }
+            ref_num = cached_ref_num;
+
+            DUMP_IMG("img");
+        }
+
+        // add a meta container for the image
+        page_out->new_image(ref_num, bbox);
+    }
+
+
+    //
+    // gfx state update methods
+    void OutputDev::updateAll(GfxState *state)
+    {
+        ::OutputDev::updateAll(state);
+
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        if (!page_out) {
+            et.log_critical( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+                             "updateAll: PdfPage instance has not been allocated" );
+        }
+    }
+
+    //
+    // line-dashes
+    void OutputDev::updateLineDash(GfxState* state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        // line dash pattern
+        double *dashPattern;
+        int dashLength;
+        double dashStart;
+        state->getLineDash(&dashPattern, &dashLength, &dashStart);
+
+        std::list<double> line_dash;
+
+        if (dashLength > 0) {
+            //std::cerr << __FUNCTION____
+            //<< " dash len: " << dashLength << ", start: " << dashStart << std::endl;
+
+            // dash start is stored at the head
+            line_dash.push_back( dashStart );
+
+            // followed by the pattern
+            for (int i = 0; i < dashLength; ++i) {
+                line_dash.push_back( dashPattern[i] );
+            }
+        }
+
+        page_out->update_line_dash(line_dash);
+    }
+
+
+    //
+    // line join style
+    void OutputDev::updateLineJoin(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getLineJoin() << " ---- + " << std::endl);
+
+        page_out->update_line_join(state->getLineJoin());
+    }
+
+    //
+    // line cap style
+    void OutputDev::updateLineCap(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getLineCap() << " ---- + " << std::endl);
+
+        page_out->update_line_cap(state->getLineCap());
+    }
+
+    //
+    // miter limit
+    void OutputDev::updateMiterLimit(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getMiterLimit() << " ---- + " << std::endl);
+
+        page_out->update_miter_limit(state->getMiterLimit());
+    }
+
+    //
+    // line width
+    void OutputDev::updateLineWidth(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": SA? " << std::boolalpha << state->getStrokeAdjust()
+                            << ", state LW: " << state->getLineWidth()
+                            << " ---- + " << std::endl);
+        double *c = state->getCTM();
+        PdfTM ctm(c[0], c[1], c[2], c[3], 0, 0);
+        Coord p = ctm.transform(state->getLineWidth(), state->getLineWidth());
+
+        page_out->update_line_width( std::min(std::abs(p.x), std::abs(p.y)) );
+    }
+
+    //
+    // is soft mask shape / alpha interpreted as shape or opacity?
+    void OutputDev::updateAlphaIsShape(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << std::boolalpha << state->getAlphaIsShape() << " ---- + " << std::endl);
+
+        if (state->getAlphaIsShape()) {
+            std::stringstream s;
+            s << __FUNCTION__ << " - value: " << std::boolalpha << state->getAlphaIsShape();
+            et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, s.str() );
+        }
+    }
+
+    //
+    // does text knock out overlapping glyphs
+    void OutputDev::updateTextKnockout(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << std::boolalpha << state->getTextKnockout() << " ---- + " << std::endl);
+
+        std::stringstream s;
+        s << __FUNCTION__ << " - value: " << std::boolalpha << state->getTextKnockout();
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, s.str() );
+    }
+
+    //
+    // fill color
+    void OutputDev::updateFillColor(GfxState *state)
+    {
+        GfxRGB rgb;
+        state->getFillRGB(&rgb);
+
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << RGBColor(rgb.r, rgb.g, rgb.b) << " ---- + " << std::endl);
+
+        page_out->update_fill_color(rgb.r, rgb.g, rgb.b);
+    }
+
+    //
+    // stroke
+    void OutputDev::updateStrokeColor(GfxState *state)
+    {
+        GfxRGB rgb;
+        state->getStrokeRGB(&rgb);
+
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ":" << RGBColor(rgb.r, rgb.g, rgb.b) << " ---- + " << std::endl);
+
+        page_out->update_stroke_color(rgb.r, rgb.g, rgb.b);
+    }
+
+
+    void OutputDev::updateBlendMode(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << util::debug::get_blend_mode_str(state->getBlendMode()) << " ---- + " << std::endl);
+
+        page_out->update_blend_mode(util::pdf_to_svg_blend_mode(state->getBlendMode()));
+    }
+
+    void OutputDev::updateFillOpacity(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getFillOpacity() << " ---- + " << std::endl);
+
+        page_out->update_fill_opacity(state->getFillOpacity());
+    }
+
+    void OutputDev::updateStrokeOpacity(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__  << ": " << state->getStrokeOpacity() << " ---- + " << std::endl);
+
+        page_out->update_stroke_opacity(state->getStrokeOpacity());
+    }
+
+    void OutputDev::updateFillOverprint(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getFillOverprint() << " ---- + " << std::endl);
+
+        page_out->update_fill_overprint(state->getFillOverprint());
+    }
+
+    void OutputDev::updateStrokeOverprint(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getStrokeOverprint() << " ---- + " << std::endl);
+
+        page_out->update_stroke_overprint(state->getStrokeOverprint());
+    }
+
+    void OutputDev::updateOverprintMode(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getOverprintMode() << " ---- + " << std::endl);
+
+        page_out->update_overprint_mode(state->getOverprintMode());
+    }
+
+    //
+    // updateTextShift tells us when text position shifts happen. I
+    // was using this to resolve TESLA-6205 but it was too agressive
+    // at splitting up spans. Now resolved by modifying text's spans()
+    // method
+    void OutputDev::updateTextShift(GfxState *state, double shift)
+    {
+#if 0 //def ENABLE_OP_TRACE
+        std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl;
+#endif
+
+#if 0
+        double ss = -shift * 0.001 * state->getFontSize();
+        int wMode = state->getFont()->getWMode();
+        if (!wMode) {
+            ss *= state->getHorizScaling();
+        }
+
+        // 0.1 is arbitrary but so far looks good enough to tell us
+        // when to treat the jump like a space
+        if (ss > 0.1) {
+#if 0
+            std::cerr << " + ---- " << __FUNCTION__ << " shift: " << shift << ", ss: " << ss
+                 << " (wMode: " << wMode
+                 << "), X, Y: (" << state->getCurX() << ", " << state->getCurY() << "), sp: "
+                 << state->getWordSpace() << " ---- + "
+                 << std::endl;
+#endif
+        }
+#endif
+    }
+
+
+    //----- grouping operators
+    void OutputDev::beginMarkedContent(char *name, Dict *properties)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << name << " ---- + " << std::endl);
+
+        //        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+    void OutputDev::endMarkedContent(GfxState *state)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        //        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+    void OutputDev::markPoint(char *name)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << name << " ---- + " << std::endl);
+
+        /*        std::stringstream s;
+        s << __FUNCTION__ << " - value: '" << name << "'";
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, s.str() );*/
+    }
+
+    void OutputDev::markPoint(char *name, Dict *properties)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << name << " ---- + " << std::endl);
+
+        /*        std::stringstream s;
+        s << __FUNCTION__ << " - value: '" << name << "'";
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, s.str() );*/
+    }
+
+
+    //----- transparency groups and soft masks
+    void OutputDev::beginTransparencyGroup(GfxState * /*state*/, double * /*bbox*/,
+                                           GfxColorSpace * /*blendingColorSpace*/,
+                                           GBool /*isolated*/, GBool /*knockout*/,
+                                           GBool /*forSoftMask*/)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+    void OutputDev::endTransparencyGroup(GfxState * /*state*/)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+    void OutputDev::paintTransparencyGroup(GfxState * /*state*/, double * /*bbox*/)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+
+    void OutputDev::setSoftMask(GfxState * /*state*/, double * /*bbox*/, GBool /*alpha*/,
+                                Function * /*transferFunc*/, GfxColor * /*backdropColor*/)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+    void OutputDev::clearSoftMask(GfxState * /*state*/)
+    {
+        DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
+
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, __FUNCTION__ );
+    }
+
+
+    // =========================================================================
+    // non-virtual methods; helpers.
+    //
+
+    void OutputDev::build_path_command(GfxState* state, PdfDocPath::Type type, PdfDocPath::EvenOddRule eo_flag)
+    {
+        if (!state->getPath()) {
+            return;
+        }
+
+        page_out->add_path(state, type, eo_flag);
+    }
+
+} // namespace
