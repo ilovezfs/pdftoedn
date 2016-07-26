@@ -9,6 +9,7 @@
 #include <GlobalParams.h>
 #include <Error.h>
 
+#include "config.h"
 #include "base_types.h"
 #include "pdf_error_tracker.h"
 #include "pdf_reader.h"
@@ -93,7 +94,8 @@ int main(int argc, char** argv)
                 return 1;
             }
             if ( vm.count("version") ) {
-                std::cout << boost::filesystem::basename(argv[0]) << " " << pdftoedn::util::version::program_version() << std::endl
+                std::cout << boost::filesystem::basename(argv[0]) << " "
+                          << PDFTOEDN_VERSION << std::endl
                           << "Linked libraries: " << std::endl
                           << pdftoedn::util::version::info();
                 return 1;

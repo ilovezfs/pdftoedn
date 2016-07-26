@@ -5,6 +5,8 @@
 
 #ifdef EDSEL_RUBY_GEM
 #include <rice/Hash.hpp>
+#else
+#include "config.h"
 #endif
 
 #include <boost/version.hpp>
@@ -23,24 +25,13 @@ namespace pdftoedn {
     namespace util {
         namespace version {
 
-            const std::string& program_version() {
-                // this will be read from an auto conf header once
-                // that's ready
-                static const std::string PDFTOEDN_VERSION = "0.31.0";
-                return PDFTOEDN_VERSION;
-            }
-
-            const pdftoedn::Symbol SYMBOL_EXT          = "edsel";
+            const pdftoedn::Symbol SYMBOL_APP          = "edsel";
             const pdftoedn::Symbol SYMBOL_POPPLER      = "poppler";
             const pdftoedn::Symbol SYMBOL_LIBPNG       = "libpng";
             const pdftoedn::Symbol SYMBOL_BOOST        = "boost";
             const pdftoedn::Symbol SYMBOL_FREETYPE     = "freetype";
             const pdftoedn::Symbol SYMBOL_LEPTONICA    = "leptonica";
             const pdftoedn::Symbol SYMBOL_RAPIDJSON    = "rapidjson";
-
-            // ext version info - obtained from Ruby side
-            static std::string ext_version;
-            void set_ext_version(const std::string& version) { ext_version = version; }
 
             // get versions for all libs - will include these in meta
             // output
@@ -94,12 +85,16 @@ namespace pdftoedn {
             }
 
 #ifdef EDSEL_RUBY_GEM
+            // ext version info - obtained from Ruby side
+            static std::string ext_version;
+            void set_ext_version(const std::string& version) { ext_version = version; }
+
             //
             // versions for returned meta
             Rice::Object libs(const FontEngine& fe)
             {
                 Rice::Hash version_h;
-                version_h[ SYMBOL_EXT ]          = ext_version;
+                version_h[ SYMBOL_APP ]          = ext_version;
                 version_h[ SYMBOL_POPPLER ]      = poppler();
                 version_h[ SYMBOL_LIBPNG  ]      = libpng();
                 version_h[ SYMBOL_BOOST ]        = boost();
@@ -110,12 +105,11 @@ namespace pdftoedn {
                 version_h[ SYMBOL_RAPIDJSON ]    = rapidjson();
                 return version_h;
             }
-#endif
-
+#else
             util::edn::Hash& libs(const pdftoedn::FontEngine& fe, util::edn::Hash& version_h)
             {
                 version_h.reserve(9);
-                version_h.push( SYMBOL_EXT         , ext_version );
+                version_h.push( SYMBOL_APP         , PDFTOEDN_VERSION );
                 version_h.push( SYMBOL_POPPLER     , poppler() );
                 version_h.push( SYMBOL_LIBPNG      , libpng() );
                 version_h.push( SYMBOL_BOOST       , boost() );
@@ -126,7 +120,7 @@ namespace pdftoedn {
                 version_h.push( SYMBOL_RAPIDJSON   , rapidjson() );
                 return version_h;
             }
-
+#endif
         } // version
     } // util
 } // namespace

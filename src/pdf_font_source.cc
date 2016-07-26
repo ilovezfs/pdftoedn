@@ -12,7 +12,6 @@
 #include <CharCodeToUnicode.h>
 #include <fofi/FoFiTrueType.h>
 
-#include "bzflag_md5.h"
 #include "util.h"
 #include "util_debug.h"
 #include "font_engine.h"
@@ -76,7 +75,7 @@ namespace pdftoedn
                 ss << std::hex << c2g_map[ii];
             }
 
-            c2g_md5 = bzflag::md5(ss.str());
+            c2g_md5 = util::md5(ss.str());
         }
     }
 
@@ -218,7 +217,7 @@ namespace pdftoedn
     {
         // save a copy of the blob and compute its md5
         font_blob.append((const char*) buffer, len);
-        blob_md5 = bzflag::md5(font_blob);
+        blob_md5 = util::md5(font_blob);
 
         font_ok = load_font(gfx_font);
     }

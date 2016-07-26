@@ -2,9 +2,11 @@
 #include <string>
 #include <iterator>
 
-#ifdef EDSEL_RUBY_GEM
+#ifdef EDSEL_RUBY_GME
 #include <ruby/ruby.h>
 #include <ruby/encoding.h>
+#else
+#include "config.h"
 #endif
 
 #ifdef __clang__
@@ -19,15 +21,17 @@
 #include <Link.h>
 #include <CharTypes.h>
 
-#ifdef USE_OPENSSL_MD5
+#ifdef HAVE_LIBOPENSSL
 #include <iomanip>
 #include <openssl/md5.h>
+#else
+#include "bzflag_md5.h"
 #endif
 
 #include "graphics.h"
 #include "pdf_links.h"
 #include "util.h"
-#include "bzflag_md5.h"
+
 
 
 namespace pdftoedn
@@ -39,9 +43,9 @@ namespace pdftoedn
         std::string md5(const std::string& blob)
         {
             // ran into problems with openssl lib & headers across
-            // Ubuntu and OS X so using local code for now - will tie
-            // this to define in config.h once set up
-#ifdef USE_OPENSSL_MD5
+            // Ubuntu and OS X so using local code if openssl is not
+            // easily found
+#ifdef HAVE_LIBOPENSSL
             // use openssl to compute
             uint8_t md5_result[MD5_DIGEST_LENGTH];
 

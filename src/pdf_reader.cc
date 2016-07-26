@@ -259,8 +259,11 @@ namespace pdftoedn
             meta_h.push( SYMBOL_PDF_ENCRYPTED                 , true );
         }
 
+#ifndef EDSEL_RUBY_GEM
+        // TODO: remove #ifdef
         util::edn::Hash version_h;
         meta_h.push( SYMBOL_LIB_VERSIONS                      , util::version::libs(font_engine, version_h));
+#endif
 
         // if we caught errors, include them
         if (et.errors_reported()) {

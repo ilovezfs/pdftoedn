@@ -27,3 +27,24 @@
 *.exe
 *.out
 *.app
+
+# autoconf
+*.log
+Makefile
+Makefile.in
+aclocal.m4
+compile
+config.sub
+config.guess
+config.h.in
+config.status
+configure
+configure.lineno
+depcomp
+install-sh
+missing
+pdftoedn
+stamp-h1
+config.h
+.deps
+autom4te.cache

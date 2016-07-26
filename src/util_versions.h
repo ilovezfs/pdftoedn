@@ -16,11 +16,9 @@ namespace pdftoedn
             // meaning
             uintmax_t data_format_version();
 
-            const std::string& program_version();
-            void set_ext_version(const std::string& version);
-
             std::string info();
 #ifdef EDSEL_RUBY_GEM
+            void set_ext_version(const std::string& version);
             Rice::Object libs(const pdftoedn::FontEngine& fe);
 #endif
 
