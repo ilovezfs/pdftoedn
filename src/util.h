@@ -4,10 +4,10 @@
 #include <string>
 #include <sstream>
 
-#include <Error.h>
-#include <CharTypes.h>
-#include <GfxState.h>
-#include <GfxFont.h>
+#include <poppler/Error.h>
+#include <poppler/CharTypes.h>
+#include <poppler/GfxState.h>
+#include <poppler/GfxFont.h>
 
 #include "pdf_font_source.h"
 #include "image.h"

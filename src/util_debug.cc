@@ -2,9 +2,9 @@
 #include <fstream>
 #include <string>
 
-#include <Error.h>
-#include <GfxState.h>
-#include <GfxFont.h>
+#include <poppler/Error.h>
+#include <poppler/GfxState.h>
+#include <poppler/GfxFont.h>
 
 #include "util.h"
 #include "util_debug.h"

@@ -6,7 +6,7 @@
 
 #include <queue>
 
-#include <GfxState.h>
+#include <poppler/GfxState.h>
 
 #include "eng_output_dev.h"
 #include "graphics.h"

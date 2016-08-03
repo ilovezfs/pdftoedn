@@ -2,15 +2,13 @@
 
 //
 // subclass of Poppler's PdfDoc for reading the contents of a
-// PDF. Note that the class ugliness is due to the inherent Poppler
-// design (that said, if you think this is fugly, don't look at the
-// OutputDev)
+// PDF
 //
 
 #include <string>
 #include <list>
 
-#include <PDFDoc.h>
+#include <poppler/PDFDoc.h>
 
 #include "font_engine.h"
 #include "pdf_doc_outline.h"

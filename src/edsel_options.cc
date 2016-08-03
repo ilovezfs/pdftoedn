@@ -109,8 +109,10 @@ namespace pdftoedn {
     // create absolute and relative image paths
     bool Options::get_image_path(intmax_t img_id, std::string& image_path) const
     {
+        boost::filesystem::path file_path(resource_dir);
+
         // ensure the resource dir exists
-        if (!util::fs::create_fs_dir(resource_dir)) {
+        if (!util::fs::create_fs_dir(file_path)) {
             return false;
         }
 
@@ -118,7 +120,6 @@ namespace pdftoedn {
         std::stringstream image_filename;
         image_filename << doc_base_name << "-" << img_id << IMAGE_FILE_EXT;
 
-        boost::filesystem::path file_path(resource_dir);
         file_path.append(image_filename.str());
         image_path = file_path.string();
         return true;

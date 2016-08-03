@@ -18,8 +18,8 @@
 #pragma clang diagnostic pop
 #endif
 
-#include <Link.h>
-#include <CharTypes.h>
+#include <poppler/Link.h>
+#include <poppler/CharTypes.h>
 
 #ifdef HAVE_LIBOPENSSL
 #include <iomanip>

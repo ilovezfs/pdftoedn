@@ -6,8 +6,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
-#include <GlobalParams.h>
-#include <Error.h>
+#include <poppler/GlobalParams.h>
+#include <poppler/Error.h>
 
 #include "config.h"
 #include "base_types.h"

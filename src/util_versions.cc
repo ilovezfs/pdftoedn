@@ -12,9 +12,9 @@
 #include <boost/version.hpp>
 #include <png.h>
 #include <leptonica/allheaders.h>
-#include <ft2build.h>
+#include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
-#include <cpp/poppler-version.h>
+#include <poppler/cpp/poppler-version.h>
 #include <rapidjson/rapidjson.h>
 
 #include "font_engine.h"

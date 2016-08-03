@@ -6,10 +6,10 @@
 #include <rice/Hash.hpp>
 #endif
 
-#include <goo/GooList.h>
-#include <Outline.h>
-#include <Link.h>
-#include <ErrorCodes.h>
+#include <poppler/goo/GooList.h>
+#include <poppler/Outline.h>
+#include <poppler/Link.h>
+#include <poppler/ErrorCodes.h>
 
 #include "util.h"
 #include "util_edn.h"

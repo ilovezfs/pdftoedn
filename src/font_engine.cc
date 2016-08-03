@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-#include <GfxFont.h>
+#include <poppler/GfxFont.h>
 
 #include "font_engine.h"
 #include "pdf_font_source.h"

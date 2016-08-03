@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include <OutputDev.h>
-#include <GfxState.h>
+#include <poppler/OutputDev.h>
+#include <poppler/GfxState.h>
 
 namespace pdftoedn
 {

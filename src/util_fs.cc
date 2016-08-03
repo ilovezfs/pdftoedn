@@ -19,33 +19,21 @@ namespace pdftoedn
     {
         namespace fs
         {
-            bool create_fs_dir(const std::string& path)
+            bool create_fs_dir(const boost::filesystem::path& dir)
             {
-                // filesystem::exists returns false if there's a
-                // trailing slash and the directory exists so remove
-                // it
-                std::string p(path);
-                while (p.back() == boost::filesystem::path::preferred_separator) {
-#if __cplusplus > 199711L
-                    p.pop_back();
-#else
-                    // g++ 4.6.1 on starcluster
-                    p.resize(p.size() - 1);  // p.erase(p.back());
-#endif
-                }
+                namespace fs = boost::filesystem;
 
                 // create it if it doesn't exist
-                boost::filesystem::path dir(p);
-                if (boost::filesystem::exists(dir)) {
+                if (fs::exists(dir)) {
                     // if it exists, error out if it's NOT a directory
-                    if (!boost::filesystem::is_directory(dir)) {
+                    if (!fs::is_directory(dir)) {
                         std::cerr << "directory " << dir << " can't be created because it exists and is not a directory" << std::endl;
                         return false;
                     }
                 }
                 else {
                     // otherwise try to create it
-                    return (boost::filesystem::create_directories(dir));
+                    return (fs::create_directories(dir));
                 }
                 return true;
             }
@@ -87,16 +75,18 @@ namespace pdftoedn
             bool directory_files(const std::string& dir, std::set<std::string>& file_list,
                                  const std::string& ext)
             {
-                const boost::filesystem::path& dir_path(dir);
+                namespace fs = boost::filesystem;
+
+                const fs::path& dir_path(dir);
                 if (!exists(dir_path)) {
                     return false;
                 }
 
-                boost::filesystem::directory_iterator end_itr; // default construction yields past-the-end
+                fs::directory_iterator end_itr; // default construction yields past-the-end
                 std::string file;
                 const uint32_t ext_len = ext.length();
 
-                for ( boost::filesystem::directory_iterator itr( dir_path );
+                for ( fs::directory_iterator itr( dir_path );
                       itr != end_itr;
                       ++itr )
                 {

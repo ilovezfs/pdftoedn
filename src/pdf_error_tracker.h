@@ -7,7 +7,7 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-private-field"
 #endif
-#include <Error.h> // poppler
+#include <poppler/Error.h>
 #ifdef __clang__
 #pragma clang diagnostic push
 #endif

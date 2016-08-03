@@ -5,17 +5,16 @@
 #include <set>
 #include <map>
 
-#include <ft2build.h>
+#include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
 
-// poppler
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-private-field"
 #endif
-#include <poppler-config.h>
-#include <OutputDev.h>
-#include <GfxFont.h>
+#include <poppler/poppler-config.h>
+#include <poppler/OutputDev.h>
+#include <poppler/GfxFont.h>
 #ifdef __clang__
 #pragma clang diagnostic push
 #endif

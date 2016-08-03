@@ -6,7 +6,7 @@
 #include <list>
 #include <vector>
 
-#include <GfxState.h> // poppler
+#include <poppler/GfxState.h>
 
 #include "base_types.h"
 #include "font.h"

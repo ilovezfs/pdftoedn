@@ -10,7 +10,7 @@
 #include <rice/Hash.hpp>
 #endif
 
-#include <GfxState.h> // poppler
+#include <poppler/GfxState.h>
 
 #include "color.h"
 #include "text.h"

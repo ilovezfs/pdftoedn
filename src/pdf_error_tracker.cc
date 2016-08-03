@@ -7,7 +7,7 @@
 #include <rice/Hash.hpp>
 #endif
 
-#include <Error.h>
+#include <poppler/Error.h>
 
 #include "pdf_error_tracker.h"
 #include "util.h"

@@ -3,7 +3,7 @@
 
 #include <png.h>
 #include <zlib.h>
-#include <GfxState.h>
+#include <poppler/GfxState.h>
 
 #include "image.h"
 #include "pdf_error_tracker.h"

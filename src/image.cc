@@ -1,4 +1,4 @@
-#include <GfxState.h> // poppler
+#include <poppler/GfxState.h>
 
 #ifdef EDSEL_RUBY_GEM
 #include <rice/Hash.hpp>

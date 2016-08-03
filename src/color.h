@@ -6,7 +6,7 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-private-field"
 #endif
-#include <GfxState.h> // poppler
+#include <poppler/GfxState.h>
 #ifdef __clang__
 #pragma clang diagnostic push
 #endif

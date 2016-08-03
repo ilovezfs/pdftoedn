@@ -9,7 +9,7 @@ namespace pdftoedn
     namespace util
     {
         namespace fs {
-            bool create_fs_dir(const std::string& path);
+            bool create_fs_dir(const boost::filesystem::path& path);
             bool check_valid_input_file(const boost::filesystem::path& infile);
             bool directory_exists(const  boost::filesystem::path& dir);
             bool directory_files(const std::string& dir, std::set<std::string>& file_list,

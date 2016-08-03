@@ -1,4 +1,4 @@
-#include <GfxState.h>
+#include <poppler/GfxState.h>
 
 #include "link_output_dev.h"
 #include "doc_page.h"

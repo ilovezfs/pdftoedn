@@ -4,12 +4,12 @@
 #include <ostream>
 #include <vector>
 
-#include <ft2build.h>
+#include <freetype2/ft2build.h>
 #include FT_TYPES_H
 #include FT_FREETYPE_H
 
-#include <Object.h> // poppler
-#include <GfxFont.h> // poppler
+#include <poppler/Object.h>
+#include <poppler/GfxFont.h>
 
 #include "base_types.h"
 

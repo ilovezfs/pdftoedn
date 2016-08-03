@@ -1,8 +1,8 @@
-#include <Page.h>
-#include <OutputDev.h>
-#include <Catalog.h>
-#include <Link.h>
-#include <Annot.h>
+#include <poppler/Page.h>
+#include <poppler/OutputDev.h>
+#include <poppler/Catalog.h>
+#include <poppler/Link.h>
+#include <poppler/Annot.h>
 
 #include "eng_output_dev.h"
 #include "doc_page.h"

@@ -13,8 +13,8 @@
 #include "util_ruby.h"
 #endif
 
-#include <GlobalParams.h>
-#include <Error.h>
+#include <poppler/GlobalParams.h>
+#include <poppler/Error.h>
 
 #include "base_types.h"
 #include "pdf_error_tracker.h"

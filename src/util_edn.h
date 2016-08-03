@@ -88,11 +88,9 @@ namespace pdftoedn {
             private:
                 std::vector<T>* elems;
 
-                // g++ 4.6 doesn't like these being pure so return ""
-                // for now
-                virtual const char* sep_chars() const { return ""; }//= 0;
-                virtual const char* open_chars() const { return ""; }//= 0;
-                virtual const char* close_chars() const { return ""; }//= 0;
+                virtual const char* sep_chars() const = 0;
+                virtual const char* open_chars() const = 0;
+                virtual const char* close_chars() const = 0;
             };
 
             // ===========================================================

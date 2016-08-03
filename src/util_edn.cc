@@ -136,7 +136,7 @@ namespace pdftoedn
                         // output each node with a space in between up to the penultimate one
                         std::for_each( elems->begin(), elems->end() - 1,
                                        [&](const T& n) {
-                                           o << n << this->sep_chars(); // g++ 4.6 errors out witout this->
+                                           o << n << sep_chars();
                                        });
                     }
                     if (!elems->empty()) {

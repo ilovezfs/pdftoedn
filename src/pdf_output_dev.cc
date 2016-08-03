@@ -2,11 +2,11 @@
 #pragma implementation
 #endif
 
-#include <Error.h>
-#include <Object.h>
-#include <GfxFont.h>
-#include <Page.h>
-#include <UTF.h>
+#include <poppler/Error.h>
+#include <poppler/Object.h>
+#include <poppler/GfxFont.h>
+#include <poppler/Page.h>
+#include <poppler/UTF.h>
 
 #include "pdf_output_dev.h"
 #include "font_engine.h"
