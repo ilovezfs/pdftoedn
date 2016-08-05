@@ -37,7 +37,7 @@ namespace pdftoedn
     static const pdftoedn::Symbol SYMBOL_FONT_ENG_OK        = "font_engine_ok";
     static const pdftoedn::Symbol SYMBOL_FONT_ENG_FONT_WARN = "found_font_warnings";
 
-    static const pdftoedn::Symbol SYMBOL_LIB_VERSIONS       = "lib_versions";
+    static const pdftoedn::Symbol SYMBOL_VERSIONS           = "versions";
 
     const double PDFReader::DPI_72 = 72.0;
 
@@ -189,7 +189,7 @@ namespace pdftoedn
             meta_h[ SYMBOL_PDF_ENCRYPTED ]                  = true;
         }
 
-        meta_h[ SYMBOL_LIB_VERSIONS ]                       = util::version::libs(font_engine);
+        meta_h[ SYMBOL_VERSIONS ]                           = util::version::libs(font_engine);
 
         // if we caught errors, include them
         if (et.errors_reported()) {
@@ -262,7 +262,7 @@ namespace pdftoedn
 #ifndef EDSEL_RUBY_GEM
         // TODO: remove #ifdef
         util::edn::Hash version_h;
-        meta_h.push( SYMBOL_LIB_VERSIONS                      , util::version::libs(font_engine, version_h));
+        meta_h.push( SYMBOL_VERSIONS                          , util::version::libs(font_engine, version_h));
 #endif
 
         // if we caught errors, include them

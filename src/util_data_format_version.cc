@@ -46,7 +46,13 @@ namespace pdftoedn {
                 //               double-nested array and each command
                 //               is now contained in a vector instead
                 //               of a hash
-                return 0x30310;
+                // 0004 0320:  08/06/16, v0.32.0
+                //             - path commands were simplified:
+                //               command list is no longer
+                //               double-nested array and each command
+                //               is now contained in a vector instead
+                //               of a hash
+                return 0x40320;
             }
         } // version
     } // util

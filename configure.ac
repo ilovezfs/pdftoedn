@@ -1,6 +1,6 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-m4_define([pdftoedn_version],[0.31.0])
+m4_define([pdftoedn_version],[0.32.0])
 
 AC_PREREQ([2.68])
 AC_INIT([pdftoedn], [pdftoedn_version], [ed@motologic.com])
@@ -76,14 +76,23 @@ AC_SEARCH_LIBS([getLeptonicaVersion], [lept],, [AC_MSG_ERROR([leptonica library 
 CPPFLAGS=$save_CPPFLAGS
 
 dnl openssl
-AX_CHECK_OPENSSL(openssl_ok=yes, openssl_ok=no)
+AX_CHECK_OPENSSL(openssl_found=yes, openssl_found=no)
 
-if test "x$openssl_ok" = "xyes"; then
+if test "x$openssl_found" = "xyes"; then
    AC_DEFINE([HAVE_LIBOPENSSL], [1], [using openssl md5])
 else
-   AC_MSG_NOTICE([openssl not found - using local md5 calculation code])
+   AC_MSG_NOTICE([
+ openssl not found - using local md5 calculation code
+
+ If you prefer to use an openssl installed in a non-standard path, pass the following option to this script:
+
+   --with-openssl=<path to root openssl dir>
+
+ (This path must contain include and lib dirs).
+ ])
+
 fi
-AM_CONDITIONAL([LOCAL_MD5], [test x$openssl_ok = xno])
+AM_CONDITIONAL([LOCAL_MD5], [test x$openssl_found = xno])
 
 
 AC_LANG_POP

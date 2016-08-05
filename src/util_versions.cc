@@ -1,5 +1,4 @@
 #include <cstdlib>
-#include <iostream>
 #include <string>
 #include <sstream>
 
@@ -25,7 +24,7 @@ namespace pdftoedn {
     namespace util {
         namespace version {
 
-            const pdftoedn::Symbol SYMBOL_APP          = "edsel";
+            const pdftoedn::Symbol SYMBOL_APP          = "pdftoedn";
             const pdftoedn::Symbol SYMBOL_POPPLER      = "poppler";
             const pdftoedn::Symbol SYMBOL_LIBPNG       = "libpng";
             const pdftoedn::Symbol SYMBOL_BOOST        = "boost";
