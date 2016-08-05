@@ -135,11 +135,10 @@ namespace pdftoedn
     class DocFontMaps {
     public:
 
-        DocFontMaps() : loaded_config("dummy"), system_map_ptr(font_maps.end()) { }
-        ~DocFontMaps() { cleanup(); }
+        DocFontMaps() : system_map_ptr(font_maps.end()) { }
+        ~DocFontMaps() { clear(); }
 
-        bool load_config(const std::string& font_map_file);
-
+        void clear();
         bool add_font_map(const std::string& map_name,
                           const std::string& file_font_name, const std::string& subst_font_name,
                           uint16_t flags, const std::list<const char*>& glyphmaps,
@@ -157,14 +156,12 @@ namespace pdftoedn
 
         // glyph map table
         GlyphMap doc_glyph_maps;
-        std::string loaded_config;
         std::list<FontData*> font_maps;
         std::list<FontData*> undef_entity_font_maps;
         std::list<FontData*>::iterator system_map_ptr;
 
         bool glyph_list_valid(const std::list<const char*>& gm) const;
         bool make_entity_list(const std::list<const char*>& mapper_names, EntityMapPtrList& mappers);
-        void cleanup();
 
         // prohibit
         DocFontMaps(const DocFontMaps&);

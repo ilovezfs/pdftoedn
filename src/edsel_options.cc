@@ -6,7 +6,9 @@
 
 #include "edsel_options.h"
 #include "util.h"
+#include "util_config.h"
 #include "util_fs.h"
+#include "font_maps.h"
 
 namespace pdftoedn {
 
@@ -41,22 +43,12 @@ namespace pdftoedn {
             }
         }
 
-        // check input font map
-        if (!fontmap.empty()) {
-            boost::filesystem::path mapfile(map_config_path());
-            mapfile.append(fontmap).replace_extension(FONT_MAP_FILE_EXT);
-
-            // set the absolute path to the font map, then check it
-            if (util::fs::check_valid_input_file(mapfile)) { // throws if error
-                font_map = mapfile.string();
-            }
-        }
-
         // check the destination
         boost::filesystem::path output_filepath(out_filename);
         boost::filesystem::path parent_path(output_filepath.parent_path());
 
-        // output filen path is required so check that its parent path exists
+        // output file path is required and will have to be created so
+        // check that its parent path exists
         if (!parent_path.empty()) {
             if (!util::fs::directory_exists(parent_path)) {
                 std::cerr << "destination folder '" << parent_path << "' does not exist" << std::endl;
@@ -78,6 +70,38 @@ namespace pdftoedn {
             }
         }
 
+        // -- font maps --
+        std::string f_map;
+
+        // clear any loaded maps and load the default
+        doc_font_maps.clear();
+
+        // check input font map to make sure it's valid
+        if (!fontmap.empty()) {
+            boost::filesystem::path mapfile(DEFAULT_CONFIG_DIR);
+            mapfile.append(fontmap).replace_extension(FONT_MAP_FILE_EXT);
+
+            // set the absolute path to the font map, then check it
+            if (util::fs::check_valid_input_file(mapfile)) { // throws if error
+                f_map = mapfile.string();
+            }
+        }
+
+        // load the default config file
+        if (!util::config::read_map_config(doc_font_maps, DEFAULT_FONT_MAP)) {
+            std::cerr << "Internal error: default font map configuration could not be done" << std::endl;
+            throw std::exception();
+        }
+
+        // load the font map if set
+        if (!f_map.empty()) {
+            if (!load_config(f_map)) {
+                throw std::exception();
+            }
+
+            font_map = f_map;
+        }
+
         // configure some useful paths, etc.
         doc_base_name = output_filepath.stem().string();
 
@@ -89,18 +113,29 @@ namespace pdftoedn {
         //        std::cerr << *this << std::endl;
     }
 
+
     //
-    // absolute path to the map file
-    std::string Options::get_absolute_map_path(const std::string& name) {
-        boost::filesystem::path mapfile(options.map_config_path());
-        mapfile.append(name).replace_extension(FONT_MAP_FILE_EXT);
-        return mapfile.string();
+    // load the default config followed by the specified font map
+    bool Options::load_config(const std::string& new_font_map_file)
+    {
+        char* font_map_data;
+        // try load the file - first read the contents
+        if (!util::fs::read_text_file(new_font_map_file, &font_map_data)) {
+            std::cerr << "Error reading specified font map file: "
+                      << new_font_map_file << std::endl;
+            return false;
+        }
+
+        // parse the JSON
+        bool file_read = util::config::read_map_config(doc_font_maps, font_map_data);
+        delete [] font_map_data;
+
+        if (!file_read) {
+            return false;
+        }
+        return true;
     }
 
-    const std::string& Options::map_config_path() const {
-        // TODO: cleanup
-        return DEFAULT_CONFIG_DIR;
-    }
 
     //
     // create absolute and relative image paths

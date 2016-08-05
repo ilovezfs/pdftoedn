@@ -29,9 +29,6 @@ namespace pdftoedn {
         const std::string& outputfile() const    { return output_file; }
         intmax_t page_number() const             { return page_num; }
 
-        const std::string& map_config_path() const;
-        const std::string& font_map_file() const { return font_map; }
-
         bool get_image_path(intmax_t id, std::string& abs_file_path) const;
         std::string get_image_rel_path(const std::string& abs_path) const;
 
@@ -45,7 +42,6 @@ namespace pdftoedn {
         bool force_pre_process_fonts() const     { return flags.force_font_preprocess; }
         bool force_output_write() const          { return flags.force_output_write; }
 
-        static std::string get_absolute_map_path(const std::string& name);
         friend std::ostream& operator<<(std::ostream& o, const Options& opt);
 
     private:
@@ -57,6 +53,8 @@ namespace pdftoedn {
         std::string output_path;
         std::string resource_dir;
         std::string doc_base_name;
+
+        bool load_config(const std::string& new_font_map_file);
     };
 
     extern pdftoedn::Options options;

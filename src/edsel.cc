@@ -25,7 +25,6 @@
 #include "util_xform.h"
 #include "util_versions.h"
 #include "edsel_options.h"
-#include "font_maps.h"
 
 
 namespace pdftoedn {
@@ -35,10 +34,6 @@ namespace pdftoedn {
 
     // run-time options passed as args
     extern pdftoedn::Options options;
-
-    // process-wide font maps
-    extern pdftoedn::DocFontMaps doc_font_maps;
-
 
 #ifdef EDSEL_RUBY_GEM
     //
@@ -166,10 +161,8 @@ namespace pdftoedn {
                 return Qnil;
             }
 
-            // set up font maps
-            if (!doc_font_maps.load_config(options.font_map_file())) {
-                return Qnil;
-            }
+            // init support libs if needed
+            pdftoedn::util::xform::init_transform_lib();
 
             // register the error handler for this document
             et = pdftoedn::ErrorTracker();
@@ -244,9 +237,6 @@ void Init_edsel(void)
     // import whatever else we've defined in the ruby side
     rb_require("edsel/engine");
     rb_require("edsel/version");
-
-    // init support libs if needed
-    pdftoedn::util::xform::init_transform_lib();
 }
 
 #endif

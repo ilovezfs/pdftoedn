@@ -129,36 +129,32 @@ int main(int argc, char** argv)
     // init support libs if needed
     pdftoedn::util::xform::init_transform_lib();
 
-    // set up font maps
-    if (pdftoedn::doc_font_maps.load_config(pdftoedn::options.font_map_file()))
-    {
-        std::ofstream output;
-        output.open(pdftoedn::options.outputfile().c_str());
+    std::ofstream output;
+    output.open(pdftoedn::options.outputfile().c_str());
 
-        if (!output.is_open()) {
-            std::cerr << pdftoedn::options.outputfile() << "Cannot open file for write" << std::endl;
-            return -1;
-        }
-
-        globalParams = new GlobalParams();
-        globalParams->setProfileCommands(false);
-        globalParams->setPrintCommands(false);
-
-        // register the error handler for this document
-        setErrorCallback(&pdftoedn::ErrorTracker::error_handler, &pdftoedn::et);
-
-        // open the doc - this reads basic properties from the doc
-        // (num pages, PDF version) and the outline
-        pdftoedn::PDFReader doc_reader;
-
-        // write the document data
-        output << doc_reader;
-
-        // done
-        output.close();
-
-        delete globalParams;
+    if (!output.is_open()) {
+        std::cerr << pdftoedn::options.outputfile() << "Cannot open file for write" << std::endl;
+        return -1;
     }
+
+    globalParams = new GlobalParams();
+    globalParams->setProfileCommands(false);
+    globalParams->setPrintCommands(false);
+
+    // register the error handler for this document
+    setErrorCallback(&pdftoedn::ErrorTracker::error_handler, &pdftoedn::et);
+
+    // open the doc - this reads basic properties from the doc
+    // (num pages, PDF version) and the outline
+    pdftoedn::PDFReader doc_reader;
+
+    // write the document data
+    output << doc_reader;
+
+    // done
+    output.close();
+
+    delete globalParams;
 
     return 1;
 }

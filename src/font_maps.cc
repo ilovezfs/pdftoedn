@@ -16,8 +16,6 @@
 #endif
 
 #include "util.h"
-#include "util_config.h"
-#include "util_fs.h"
 #include "font_maps.h"
 #include "pdf_font_source.h"
 #include "edsel_options.h"
@@ -179,41 +177,8 @@ namespace pdftoedn
     //
 
     //
-    // load the given config file - TODO: move this to edsel_options
-    bool DocFontMaps::load_config(const std::string& font_map_file)
-    {
-        if (loaded_config != font_map_file)
-        {
-            // clear loaded maps
-            cleanup();
-
-            // load the default config file
-            if (!util::config::read_map_config(DEFAULT_FONT_MAP, *this)) {
-                return false;
-            }
-
-            // if a map was given
-            if (!font_map_file.empty())
-            {
-                // try load the file
-                char* font_map_data;
-                if (util::fs::read_text_file(font_map_file, &font_map_data)) {
-                    if (util::config::read_map_config(font_map_data, *this)) {
-                        loaded_config = font_map_file;
-                    }
-                } else {
-                    std::cerr << "Error reading config file " << font_map_file << std::endl;
-                }
-                delete [] font_map_data;
-            }
-        }
-        return true;
-    }
-
-
-    //
-    //
-    void DocFontMaps::cleanup()
+    // delete all loaded maps
+    void DocFontMaps::clear()
     {
         // delete allocated maps
         util::delete_ptr_container_elems(undef_entity_font_maps);
@@ -354,7 +319,7 @@ namespace pdftoedn
             pdf_font_name_no_ws.append(s);
         }
 
-        // lower-case it
+        // lower-case it. TODO: fix case-handling for regex patterns
         std::string lc_font_name_no_ws(pdf_font_name_no_ws);
         util::tolower(lc_font_name_no_ws);
 

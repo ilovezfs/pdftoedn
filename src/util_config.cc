@@ -214,7 +214,7 @@ namespace pdftoedn
 
             //
             // parses a font map configuration in JSON format
-            bool read_map_config(const char* data, DocFontMaps& maps)
+            bool read_map_config(DocFontMaps& maps, const char* const data)
             {
                 rapidjson::Document d;
                 d.Parse(data);
