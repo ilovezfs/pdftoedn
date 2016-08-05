@@ -45,6 +45,7 @@ pdftoedn_SOURCES = \
 	transforms.cc \
 	util.cc \
 	util_config.cc \
+	util_config_default_map.cc \
 	util_data_format_version.cc \
 	util_debug.cc \
 	util_edn.cc \

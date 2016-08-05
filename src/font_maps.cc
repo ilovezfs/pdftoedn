@@ -17,6 +17,7 @@
 
 #include "util.h"
 #include "util_config.h"
+#include "util_fs.h"
 #include "font_maps.h"
 #include "pdf_font_source.h"
 #include "edsel_options.h"
@@ -178,7 +179,7 @@ namespace pdftoedn
     //
 
     //
-    // load the given config file
+    // load the given config file - TODO: move this to edsel_options
     bool DocFontMaps::load_config(const std::string& font_map_file)
     {
         if (loaded_config != font_map_file)
@@ -187,21 +188,24 @@ namespace pdftoedn
             cleanup();
 
             // load the default config file
-            if (!util::config::read_map_config(options.default_map_file(), *this)) {
+            if (!util::config::read_map_config(DEFAULT_FONT_MAP, *this)) {
                 return false;
             }
 
-            // if no map was given or the specified map file is the default, don't load anything else
-            if (font_map_file.empty() || font_map_file == options.default_map_file()) {
-                return true;
+            // if a map was given
+            if (!font_map_file.empty())
+            {
+                // try load the file
+                char* font_map_data;
+                if (util::fs::read_text_file(font_map_file, &font_map_data)) {
+                    if (util::config::read_map_config(font_map_data, *this)) {
+                        loaded_config = font_map_file;
+                    }
+                } else {
+                    std::cerr << "Error reading config file " << font_map_file << std::endl;
+                }
+                delete [] font_map_data;
             }
-
-            // load the file
-            if (!util::config::read_map_config(font_map_file, *this)) {
-                return false;
-            }
-
-            loaded_config = font_map_file;
         }
         return true;
     }

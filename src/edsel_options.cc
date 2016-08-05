@@ -14,8 +14,7 @@ namespace pdftoedn {
     static const std::string IMAGE_FILE_EXT    = ".png";
     static const std::string FONT_MAP_FILE_EXT = ".json";
 
-    static const std::string DEFAULT_CONFIG_DIR = util::expand_environment_variables("${HOME}") + "/.edsel_fontmaps/";
-    static const std::string DEFAULT_FONT_MAP_FILE = Options::get_absolute_map_path("default_font_map");
+    static const std::string DEFAULT_CONFIG_DIR = util::expand_environment_variables("${HOME}") + "/.pdftoedn/";
 
     //
     // constructor
@@ -99,10 +98,8 @@ namespace pdftoedn {
     }
 
     const std::string& Options::map_config_path() const {
+        // TODO: cleanup
         return DEFAULT_CONFIG_DIR;
-    }
-    const std::string& Options::default_map_file() const {
-        return DEFAULT_FONT_MAP_FILE;
     }
 
     //

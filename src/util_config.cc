@@ -14,7 +14,6 @@
 
 #include "util.h"
 #include "util_config.h"
-#include "util_fs.h"
 #include "font_maps.h"
 
 namespace pdftoedn
@@ -215,18 +214,10 @@ namespace pdftoedn
 
             //
             // parses a font map configuration in JSON format
-            bool read_map_config(const std::string& config_file, DocFontMaps& maps)
+            bool read_map_config(const char* data, DocFontMaps& maps)
             {
-                char* data;
-
-                if (!util::fs::read_text_file(config_file, &data)) {
-                    std::cerr << "Error reading config file " << config_file << std::endl;
-                    return false;
-                }
-
                 rapidjson::Document d;
                 d.Parse(data);
-                delete [] data;
 
 #ifdef DUMP_READ_JSON_DATA
                 rapidjson::StringBuffer buffer;
@@ -237,7 +228,7 @@ namespace pdftoedn
 #endif
 
                 if (d.HasParseError()){
-                    std::cerr << "Parse error reading " << config_file << ": " << GetParseError_En(d.GetParseError()) << std::endl;
+                    std::cerr << "JSON parse error: " << GetParseError_En(d.GetParseError()) << std::endl;
                     return false;
                 }
 

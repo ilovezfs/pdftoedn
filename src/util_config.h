@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 namespace pdftoedn
 {
     class DocFontMaps;
@@ -10,7 +8,9 @@ namespace pdftoedn
     {
         namespace config {
 
-            bool read_map_config(const std::string& config_file, pdftoedn::DocFontMaps& maps);
+            bool read_map_config(const char* config_data, pdftoedn::DocFontMaps& maps);
         }
     }
+
+    extern const char* DEFAULT_FONT_MAP;
 }

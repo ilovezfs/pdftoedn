@@ -30,7 +30,6 @@ namespace pdftoedn {
         intmax_t page_number() const             { return page_num; }
 
         const std::string& map_config_path() const;
-        const std::string& default_map_file() const;
         const std::string& font_map_file() const { return font_map; }
 
         bool get_image_path(intmax_t id, std::string& abs_file_path) const;
