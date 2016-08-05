@@ -9,7 +9,9 @@
 #include <poppler/GlobalParams.h>
 #include <poppler/Error.h>
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 #include "base_types.h"
 #include "pdf_error_tracker.h"
 #include "pdf_reader.h"
@@ -100,6 +102,13 @@ int main(int argc, char** argv)
                           << pdftoedn::util::version::info();
                 return 1;
             }
+            if ( vm.count("page_number")) {
+                intmax_t pg = vm["page_number"].as<intmax_t>();
+                if (pg < -1) {
+                    std::cout << "Invalid page number " << pg << std::endl;
+                    return -1;
+                }
+            }
             po::notify(vm);
         }
         catch (po::error& e) {
@@ -129,14 +138,6 @@ int main(int argc, char** argv)
     // init support libs if needed
     pdftoedn::util::xform::init_transform_lib();
 
-    std::ofstream output;
-    output.open(pdftoedn::options.outputfile().c_str());
-
-    if (!output.is_open()) {
-        std::cerr << pdftoedn::options.outputfile() << "Cannot open file for write" << std::endl;
-        return -1;
-    }
-
     globalParams = new GlobalParams();
     globalParams->setProfileCommands(false);
     globalParams->setPrintCommands(false);
@@ -144,19 +145,42 @@ int main(int argc, char** argv)
     // register the error handler for this document
     setErrorCallback(&pdftoedn::ErrorTracker::error_handler, &pdftoedn::et);
 
-    // open the doc - this reads basic properties from the doc
-    // (num pages, PDF version) and the outline
+    // open the doc using arguments in Options - this step reads
+    // general properties from the doc (num pages, PDF version) and
+    // the outline
     pdftoedn::PDFReader doc_reader;
+
+    // document is open and basic meta has been read. Before trying to
+    // generate output, ensure the page number given is within range
+    if (pdftoedn::options.page_number() > 0 &&
+        pdftoedn::options.page_number() >= doc_reader.getNumPages()) {
+        std::cerr << "Error: requested page number " << pdftoedn::options.page_number()
+                  << " is not valid. Document has "
+                  << doc_reader.getNumPages() << " page"
+                  << ((doc_reader.getNumPages() > 1) ? 's' : '\0')
+                  << " and value must be 0-indexed."
+                  << std::endl;
+        delete globalParams;
+        return -1;
+    }
+
+    std::ofstream output;
+    output.open(pdftoedn::options.outputfile().c_str());
+
+    if (!output.is_open()) {
+        std::cerr << pdftoedn::options.outputfile()
+                  << "Cannot open file for write" << std::endl;
+        return -1;
+    }
 
     // write the document data
     output << doc_reader;
 
     // done
     output.close();
-
     delete globalParams;
 
-    return 1;
+    return 0;
 }
 
 #endif // EDSEL_RUBY_GEM

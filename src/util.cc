@@ -2,11 +2,13 @@
 #include <string>
 #include <iterator>
 
-#ifdef EDSEL_RUBY_GME
+#ifdef EDSEL_RUBY_GEM
 #include <ruby/ruby.h>
 #include <ruby/encoding.h>
 #else
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 #endif
 
 #ifdef __clang__
