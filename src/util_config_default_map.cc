@@ -21,7 +21,7 @@ namespace pdftoedn {
         "              [ \"Impact\",                                        \"Impact\",              [],                   [ \"standardMap\" ] ], " \
         "              [ \"NewCenturySchlbk\",                              \"Times\",               [],                   [ \"standardMap\" ] ], " \
         "              [ \"InterleafSymbols\",                              \"Symbol\" ], " \
-        "              [ \"Symbol\",                                        \"Symbol\",              [],                   [ \"symclasMap\", \"standardMap\", \"symbolEncodingMap\" ] ], " \
+        "              [ \"Symbol\",                                        \"Symbol\",              [],                   [ \"symclasMap\", \"standardMap\" ] ], " \
         "              [ \"Times\",                                         \"Times\",               [],                   [ \"standardMap\" ] ], " \
         "              [ \"Comic\",                                         \"Comic Sans MS\",       [],                   [ \"standardMap\" ] ], " \
         "              [ \"ZapfDingbats\",                                  \"Zapf Dingbats\",       [],                   [ \"zapfdingbatsMap\", \"standardMap\" ] ], " \
@@ -382,10 +382,6 @@ namespace pdftoedn {
         "            \"C0114\":           174," \
         "            \"C0116\":          8482," \
         "            \"C0122\":          9670" \
-        "        }," \
-        "        \"symbolEncodingMap\":" \
-        "        {" \
-        "            \"00d3\":            169" \
         "        }," \
         "        \"europeanPiMap\":" \
         "        {" \

@@ -11,38 +11,38 @@ namespace pdftoedn {
 
             // ===========================================================
             // generic container to represent EDN vector and hash
-            // sequences. Vectors will work pretty much the same way
-            // but Hashes don't function as a real hash/map as they
-            // are also represented as a vector (since the main
-            // function of the EDN Hash is to output a sequence of
-            // pairs. For this reason, util::edn::Vector and
-            // util::edn::Hash should not be thought of as std::vector
-            // and std::unordered_map - they won't work the same
-            // way. I initially wanted to represent these using those
-            // types with elements as std::shared_ptr but I tested
-            // switching everything and performance took a serious
-            // hit. For simplification and speed, this does the job at
-            // the expense of requiring minor extra care. This
-            // basically means:
+            // sequences. Vectors behave mostly as expected but Hashes
+            // don't function as a real hash/map as they are also
+            // represented as a vector (since the main purpose of the
+            // EDN Hash is to output a sequence of pairs. For this
+            // reason, util::edn::Vector and util::edn::Hash should
+            // not be thought of as std::vector and std::unordered_map
+            // - they won't work the same way.
+            //
+            // I initially thought of represent these using those
+            // std:: types with elements as std::shared_ptr but I
+            // tested switching everything and performance took a
+            // serious hit. For simplification and speed, this does
+            // the job at the expense of requiring minor extra care to
+            // know you can't replace a entry in a util::edn::Hash
+            // since it's just a vector.
+            //
+            // Also note that these use EDNNodes to store the
+            // data. This means:
             //
             // * "primitive" and standard types (int, uintmax_t, bool,
             // double) are stored as a copy
             //
-            // * a std::string is allocated to store char * and
-            // * std::strings since they might be temporary values
+            // * a std::string is allocated to store char * but
+            //   std::strings are only copied if passed as an r-value
             //
-            // * Coord and Boundingbox may be output using temporary
-            // values so copies are made when passed by reference to the
-            // util::edn containers (Vector and Hash)
+            // * Coord and BoundingBox storage behavior is the same as
+            //   std::string
             //
-            // * any edsel type passed as a pointer is not copied since it
-            // is assumed they are members of a class that will persist
-            // beyond the call to to_edn().
+            // * any edsel type passed as a pointer is not copied
+            //   since it is assumed they are members of a class that
+            //   will persist beyond the call to to_edn().
             //
-            // in brief: pointers stored in util::edn::Vector and
-            // util::edn::Hash are not freed. primitives and edsel types
-            // passed by value or reference are duplicated and the copies
-            // are free once edn output is written
             template <class T>
             class Container : public pdftoedn::gemable {
             protected:
@@ -95,7 +95,7 @@ namespace pdftoedn {
 
             // ===========================================================
             // util::edn::Vector is a Container of EDNNodes so the
-            // interface is direct. We expect to know the size of the
+            // interface is 1-1. We expect to know the size of the
             // container so the constructor requires it
             struct Vector : public Container<EDNNode>
             {
@@ -133,7 +133,8 @@ namespace pdftoedn {
             // that a node holds ownership until it is copied except
             // for primitives (bool, intmax_t, etc.) for which the
             // value is stored directly. Ownership is transfered when
-            // copied, moved, or assigned
+            // copied, moved, or assigned. Owner nodes delete their
+            // elements.
             class EDNNode
             {
             public:
@@ -196,12 +197,12 @@ namespace pdftoedn {
 
                 Type type;
                 union Val {
-                    Val(bool val)               : b(val)   {}
-                    Val(uintmax_t val)          : ui(val)  {}
-                    Val(uint8_t val)            : ui(val)  {}
-                    Val(intmax_t val)           : i(val)   {}
-                    Val(int val)                : i(val)   {}
-                    Val(double val)             : d(val)   {}
+                    Val(bool val)                     : b(val)   {}
+                    Val(uintmax_t val)                : ui(val)  {}
+                    Val(uint8_t val)                  : ui(val)  {}
+                    Val(intmax_t val)                 : i(val)   {}
+                    Val(int val)                      : i(val)   {}
+                    Val(double val)                   : d(val)   {}
                     Val(const std::string* val)       : str(val) {}
                     Val(const pdftoedn::gemable* val) : obj(val) {}
 
