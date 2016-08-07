@@ -1,0 +1,145 @@
+.TH PDFTOEDN "1" "August 2016" "pdftoedn" "User Commands"
+.SH NAME
+pdftoedn \- manual page for pdftoedn
+.SH SYNOPSIS
+.B pdftoedn
+[\fI\,options\/\fR] \fI\,{-o <output directory>} {filename}\/\fR
+.SH DESCRIPTION
+.B pdftoedn
+is tool for extracting the contents of a PDF document and saving them
+to a file in Extensible Data Notation (EDN) format. The written output
+will contain a hash with two entries:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI:meta\fR, a hash containing the PDF format version, linked library
+versions, and document's outline.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI:pages\fR, an array with each index carrying a hash of resources
+(fonts, image blob references, colors), text, and graphics page data.
+.RE
+.RE
+.PP
+.PP
+.B pdftoedn
+saves text data in sorted order (top-left to bottom-right) for easier
+extraction. Spans are split based on either glyph position or a change
+in font but the application provides support for font and glyph
+replacement via a JSON configuration map file that can be passed as an
+argument. It prioritizes the replacement fonts to assemble text spans
+by matching fonts specified to be equivalent. For example, a document
+carrying a line with the text "Total cost is " using a font named
+\fIQUDIXD-Custom1-1\fR followed by the text "$20" using a font named
+\fISJFHE-Swissb\fR, with both fonts mapped to \fIHelvetica\fR in the
+config map, produces output with the entire span assembled using
+\fIHelvetica\fR.
+.PP
+.B pdftoedn
+extracts document images and saves them to disk in PNG format with any
+transformations specified in the document. Files are saved in a
+subdirectory named after the document's base name.
+.PP
+This man page covers basic usage of the application. For more
+information, including output format and font map configuration
+format, please refer to the online documentation:
+https://github.com/edporras/pdftoedn.
+.SH USAGE
+.PP
+Process the document file1.pdf:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+$ pdftoedn \-o file1.edn file1.pdf
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Process only the first page of the document file1.pdf. Note that the
+value should be 0-indexed and that the number of pages can't be
+determined until the document's \fI:meta\fR has been read. Also, the
+output will contain only one entry in the \fI:pages\fR array and the
+entry will be at index 0 (however, the has contains a \fI:pg_num\fR
+entry to indicate the document's page number (1-indexed):
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+$ pdftoedn \-p 0 \-o file1.edn file1.pdf
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Process the document file1.pdf using the font map file ~/.pdftoedn/fontmap1.json:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+$ pdftoedn \-m fontmap1 \-o file1.edn file1.pdf
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.SH OPTIONS
+.TP
+\fB\-a\fR [ \fB\-\-use_page_crop_box\fR ]
+Use page crop box instead of media box when
+reading page content.
+.TP
+\fB\-D\fR [ \fB\-\-debug_meta\fR ]
+Include additional debug metadata in output.
+.TP
+\fB\-f\fR [ \fB\-\-force_output\fR ]
+Overwrite output file if it exists.
+.TP
+\fB\-i\fR [ \fB\-\-invisible_text\fR ]
+Include invisible text in output (for use with
+OCR'd documents).
+.TP
+\fB\-l\fR [ \fB\-\-links_only\fR ]
+Extract only link data.
+.TP
+\fB\-m\fR [ \fB\-\-font_map_file\fR ] filename[.json]
+JSON font mapping configuration file to use for this run. File is read
+from the ~/.pdftoedn/ directory.
+.TP
+\fB\-O\fR [ \fB\-\-omit_outline\fR ]
+Don't extract outline data.
+.TP
+\fB\-p\fR [ \fB\-\-page_number\fR ] arg
+Extract data for only this page.
+.TP
+\fB\-v\fR [ \fB\-\-version\fR ]
+Display version information and exit.
+.TP
+\fB\-h\fR [ \fB\-\-help\fR ]
+Display this message.
+.PP
+.SH FILES
+.B pdftoedn
+searches for specified font maps configuration files under the ~/.pdftoedn directory.
+.SH BUGS
+Please report all issues via https://github.com/edporras/pdftoedn/issues.
+.SH AUTHOR
+Ed Porras. Based on an initial implementation by Jack Rusher.
