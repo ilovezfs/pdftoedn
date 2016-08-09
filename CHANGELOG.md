@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.32.1 - 2016-08-09
+
+### Added
+* autotools-based test suite (run with `make check`)
+* function to output loaded font maps
+
+### Changed
+* fix for -1 page number argument. Ignored but should not be accepted
+
 ## 0.32.0 - 2016-08-08
 
 Initial public release. Completed conversion from ruby gem - some
