@@ -152,6 +152,8 @@ namespace pdftoedn
 
         bool search_std_map(const std::string& entity, uintmax_t& remapped) const;
 
+        friend std::ostream& operator<<(std::ostream& o, const DocFontMaps& fm);
+
     private:
 
         // glyph map table

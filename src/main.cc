@@ -48,6 +48,7 @@ int main(int argc, char** argv)
     // parse the options
     pdftoedn::Options::Flags flags = { false };
     std::string filename, output_file, font_map_file;
+    bool show_font_list = false;
     intmax_t page_number = -1;
 
     try
@@ -75,6 +76,8 @@ int main(int argc, char** argv)
              "Extract data for only this page.")
             ("filename",            po::value<std::string>(&filename)->required(),
              "PDF document to process.")
+            ("show_font_map_list,F",po::bool_switch(&show_font_list),
+             "Display the configured font substitution list and exit.")
             ("version,v",
              "Display version information and exit.")
             ("help,h",
@@ -104,7 +107,7 @@ int main(int argc, char** argv)
             }
             if ( vm.count("page_number")) {
                 intmax_t pg = vm["page_number"].as<intmax_t>();
-                if (pg < -1) {
+                if (pg < 0) {
                     std::cout << "Invalid page number " << pg << std::endl;
                     return -1;
                 }
@@ -133,6 +136,12 @@ int main(int argc, char** argv)
     }
     catch (std::exception& e) {
         return -1;
+    }
+
+    // dump the font map list and exit if the -F flag was passed
+    if (show_font_list) {
+        std::cout << pdftoedn::doc_font_maps << std::endl;
+        return 0;
     }
 
     // init support libs if needed

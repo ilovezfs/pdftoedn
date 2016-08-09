@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <algorithm>
 #include <string>
 #include <cstring>
@@ -570,4 +571,31 @@ namespace pdftoedn
         }
         return false;
     }
+
+
+    //
+    // output the list of loaded maps
+    static void output_font_list(std::ostream& o, const std::list<FontData*>& fdl)
+    {
+        std::for_each(fdl.begin(), fdl.end(),
+                      [&](const FontData* fd) {
+                          o << std::setw(40) << fd->font_name_pattern()
+                            << " "
+                            << fd->output_font() << std::endl;
+                      });
+    }
+
+
+    std::ostream& operator<<(std::ostream& o, const DocFontMaps& fm)
+    {
+        if (!fm.font_maps.empty()) {
+            output_font_list(o, fm.font_maps);
+        }
+
+        if (!fm.undef_entity_font_maps.empty()) {
+            output_font_list(o, fm.undef_entity_font_maps);
+        }
+        return o;
+    }
+
 }
