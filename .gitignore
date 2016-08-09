@@ -48,3 +48,7 @@ stamp-h1
 config.h
 .deps
 autom4te.cache
+*.trs
+tests/docs/*.edn
+*.tmp
+*.old

@@ -114,4 +114,7 @@ AC_TYPE_UINT8_T
 AC_FUNC_ERROR_AT_LINE
 AC_CHECK_FUNCS([memset setlocale strerror strstr])
 
+# tests
+AC_CONFIG_FILES([tests/Makefile])
+
 AC_OUTPUT
