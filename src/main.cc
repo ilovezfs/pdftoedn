@@ -134,6 +134,9 @@ int main(int argc, char** argv)
     {
         pdftoedn::options = pdftoedn::Options(filename, font_map_file, output_file, flags, (page_number >= 0 ? page_number : -1));
     }
+    catch (pdftoedn::invalid_pdf& e) {
+        return 5;
+    }
     catch (std::exception& e) {
         return 2;
     }

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <list>
+#include <exception>
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -132,6 +133,10 @@ namespace pdftoedn
         std::list<error_type> ignore_errors;
 
         bool error_muted(error_type e) const;
+    };
+
+    struct invalid_pdf : public std::invalid_argument {
+        invalid_pdf() : invalid_argument("Invalid PDF document") {}
     };
 
     extern pdftoedn::ErrorTracker et;

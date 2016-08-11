@@ -9,6 +9,7 @@
 #include "util_config.h"
 #include "util_fs.h"
 #include "font_maps.h"
+#include "pdf_error_tracker.h"
 
 namespace pdftoedn {
 
@@ -39,7 +40,7 @@ namespace pdftoedn {
             boost::cmatch what;
             if (!boost::regex_match(buf, what, boost::regex("%PDF\\-[1-9]\\.[0-9]"), boost::match_default)) {
                 std::cerr << file_name << " does not look like a valid PDF" << std::endl;
-                throw std::exception();
+                throw invalid_pdf();
             }
         }
 
