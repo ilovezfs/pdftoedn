@@ -60,9 +60,10 @@ namespace pdftoedn
 #ifdef EDSEL_RUBY_GEM
         // rubify
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
         util::edn::Hash& to_edn_hash(util::edn::Hash& font_h) const;
+#endif
 
         static const pdftoedn::Symbol SYMBOL_FAMILY;
         static const pdftoedn::Symbol SYMBOL_STYLE_BOLD;

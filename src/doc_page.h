@@ -106,9 +106,9 @@ namespace pdftoedn
 
         // static method to process page data passed from ruby
         static Rice::Object recompute_bounds(Rice::Hash page);
-#endif
-
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
+#endif
 
         static const pdftoedn::Symbol SYMBOL_PAGE_TEXT_SPANS;
         static const pdftoedn::Symbol SYMBOL_PAGE_GFX_CMDS;
@@ -130,9 +130,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
             virtual Rice::Object to_ruby() const;
-#endif
+#else
             virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
             void check_fonts() const;
 
         private:
@@ -194,9 +194,9 @@ namespace pdftoedn
         intmax_t cur_font_index() const { return cur_text.attribs.font_idx; }
 #ifdef EDSEL_RUBY_GEM
         Rice::Hash resource_output() const;
-#endif
+#else
         util::edn::Hash& resource_to_edn_hash(util::edn::Hash& resource_h) const;
-
+#endif
         bool inside_page(const BoundingBox& bbox) const { return bbox.is_inside( this->bbox ); }
         intmax_t inside_link(const BoundingBox& bbox) const;
         bool insert_pending_span();

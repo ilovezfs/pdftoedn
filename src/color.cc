@@ -24,8 +24,7 @@ namespace pdftoedn
 
         return Rice::String(str.str());
     }
-#endif
-
+#else
     //
     // output color components into an HTML-style color string (e.g.: #00ff00)
     std::ostream& RGBColor::to_edn(std::ostream& o) const
@@ -38,5 +37,5 @@ namespace pdftoedn
           << '"';
         return o;
     }
-
+#endif
 } // namespace

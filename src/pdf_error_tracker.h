@@ -82,9 +82,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
             virtual Rice::Object to_ruby() const;
-#endif
+#else
             virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
         private:
             error_type type;
             level lvl;
@@ -121,10 +121,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
-
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
         // method to register error handler w/ poppler
         static void error_handler(void *data, ErrorCategory category, Goffset pos, char *msg);
 

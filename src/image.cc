@@ -130,7 +130,7 @@ namespace pdftoedn
 
         return props_h;
     }
-#endif
+#else
     std::ostream& StreamProps::to_edn(std::ostream& o) const
     {
         util::edn::Hash props_h(5);
@@ -189,7 +189,7 @@ namespace pdftoedn
         o << props_h;
         return o;
     }
-
+#endif
 
     // =============================================
     // PDF image blob
@@ -212,7 +212,7 @@ namespace pdftoedn
 
         return image_h;
     }
-#endif
+#else
     std::ostream& ImageData::to_edn(std::ostream& o) const
     {
         util::edn::Hash image_h(7);
@@ -229,7 +229,7 @@ namespace pdftoedn
         return o;
 
     }
-
+#endif
 
     // =============================================
     // PDF image class
@@ -251,7 +251,7 @@ namespace pdftoedn
 
         return image_h;
     }
-#endif
+#else
     std::ostream& PdfImage::to_edn(std::ostream& o) const
     {
         // image fields
@@ -265,7 +265,7 @@ namespace pdftoedn
         }
         o << image_h;
         return o;
-
     }
+#endif
 
 } // namespace

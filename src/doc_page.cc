@@ -813,8 +813,8 @@ namespace pdftoedn
         resource_h[ SYMBOL_RES_GLYPHS ]               = glyph_a;
         return resource_h;
     }
-#endif
 
+#else
 
     //
     // builds the resource hash data
@@ -924,7 +924,7 @@ namespace pdftoedn
         o << page_h;
         return o;
     }
-
+#endif
 
     // ==================================================================
     // private struct to track transient collection state
@@ -1024,8 +1024,7 @@ namespace pdftoedn
         }
         return font_h;
     }
-#endif
-
+#else
     std::ostream& PdfPage::PageFont::to_edn(std::ostream& o) const
     {
         util::edn::Hash font_h(4);
@@ -1066,6 +1065,7 @@ namespace pdftoedn
         o << font_h;
         return o;
     }
+#endif
 
     //
     // debug info about font map errors

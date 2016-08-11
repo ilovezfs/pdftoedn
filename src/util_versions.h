@@ -20,10 +20,9 @@ namespace pdftoedn
 #ifdef EDSEL_RUBY_GEM
             void set_ext_version(const std::string& version);
             Rice::Object libs(const pdftoedn::FontEngine& fe);
-#endif
-
+#else
             util::edn::Hash& libs(const pdftoedn::FontEngine& fe, util::edn::Hash& h);
-
+#endif
             // font engine initializes freetype so we need this kludgy crap
             std::string freetype(const pdftoedn::FontEngine&);
         }

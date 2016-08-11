@@ -198,7 +198,8 @@ namespace pdftoedn
 
         return meta_h;
     }
-#endif
+
+#else
 
     std::ostream& PDFReader::meta(std::ostream& o) {
         util::edn::Hash meta_h(14);
@@ -259,11 +260,8 @@ namespace pdftoedn
             meta_h.push( SYMBOL_PDF_ENCRYPTED                 , true );
         }
 
-#ifndef EDSEL_RUBY_GEM
-        // TODO: remove #ifdef
         util::edn::Hash version_h;
         meta_h.push( SYMBOL_VERSIONS                          , util::version::libs(font_engine, version_h));
-#endif
 
         // if we caught errors, include them
         if (et.errors_reported()) {
@@ -272,7 +270,7 @@ namespace pdftoedn
         o << meta_h;
         return o;
     }
-
+#endif
 
     //
     // calls poppler's display page with the necessary parameters
@@ -310,7 +308,8 @@ namespace pdftoedn
 
         return page_h;
     }
-#endif
+
+#else
 
     //
     // extract the document page data
@@ -366,7 +365,7 @@ namespace pdftoedn
         o << "]}";
         return o;
     }
-
+#endif
 
     //
     // extract the outline data

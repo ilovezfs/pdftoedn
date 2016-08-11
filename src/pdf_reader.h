@@ -26,6 +26,7 @@ namespace pdftoedn
     class PDFReader : public PDFDoc
     {
     public:
+        static const double DPI_72; // 72.0
 
         PDFReader();
         virtual ~PDFReader() { delete eng_odev; }
@@ -38,14 +39,11 @@ namespace pdftoedn
         Rice::Object meta();
         // return page data
         Rice::Object process_page(uintmax_t page_num);
-#endif
-
+#else
         std::ostream& meta(std::ostream& o);
         std::ostream& process_page(uintmax_t page_num, std::ostream& o);
-
-        static const double DPI_72; // 72.0
-
         friend std::ostream& operator<<(std::ostream& o, PDFReader& doc);
+#endif
 
     private:
         bool init_ok;

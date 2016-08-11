@@ -35,7 +35,6 @@ namespace pdftoedn {
     // run-time options passed as args
     extern pdftoedn::Options options;
 
-#ifdef EDSEL_RUBY_GEM
     //
     // C-extension Engine representation
     class Engine
@@ -193,11 +192,9 @@ namespace pdftoedn {
 
     }; // Engine
 
-#endif
 } // namespace
 
 
-#ifdef EDSEL_RUBY_GEM
 //
 // ruby calls this to load the extension
 extern "C"
@@ -238,5 +235,3 @@ void Init_edsel(void)
     rb_require("edsel/engine");
     rb_require("edsel/version");
 }
-
-#endif

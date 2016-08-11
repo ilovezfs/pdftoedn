@@ -47,8 +47,7 @@ namespace pdftoedn
         coord_a.push(y);
         return coord_a;
     }
-#endif
-
+#else
     std::ostream& Coord::to_edn(std::ostream& o) const
     {
         util::edn::Vector v(2);
@@ -57,7 +56,7 @@ namespace pdftoedn
         o << v;
         return o;
     }
-
+#endif
 
     // =============================================
     // transform matrix
@@ -369,8 +368,7 @@ namespace pdftoedn
         bbox_a.push( c2.to_ruby() );
         return bbox_a;
     }
-#endif
-
+#else
     std::ostream& BoundingBox::to_edn(std::ostream& o) const
     {
         util::edn::Vector v(2);
@@ -379,6 +377,7 @@ namespace pdftoedn
         o << v;
         return o;
     }
+#endif
 
     // =============================================
     // Bounds-builder
@@ -474,7 +473,7 @@ namespace pdftoedn
         }
         return bounding_box().to_ruby();
     }
-#endif
+#else
     std::ostream& Bounds::to_edn(std::ostream& o) const
     {
         // check if we've expanded any of the values. If not, x_min is
@@ -492,5 +491,5 @@ namespace pdftoedn
 
         return o;
     }
-
+#endif
 } // namespace

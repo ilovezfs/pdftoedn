@@ -29,7 +29,8 @@ namespace pdftoedn
                        );
         return transform_a;
     }
-#endif
+
+#else
 
     util::edn::Vector& Transform::list_to_edn(const std::list<Transform*>& l, util::edn::Vector& transform_a)
     {
@@ -38,6 +39,7 @@ namespace pdftoedn
                        );
         return transform_a;
     }
+#endif
 
 #ifdef EDSEL_RUBY_GEM
     //
@@ -51,7 +53,7 @@ namespace pdftoedn
         rot_h[ SYMBOL_ANGLE ]            = angle;
         return rot_h;
     }
-#endif
+#else
     std::ostream& Rotate::to_edn(std::ostream& o) const
     {
         util::edn::Hash rot_h(3);
@@ -62,6 +64,7 @@ namespace pdftoedn
         o << rot_h;
         return o;
     }
+#endif
 
 #ifdef EDSEL_RUBY_GEM
     //
@@ -74,7 +77,7 @@ namespace pdftoedn
         translate_h[ SYMBOL_DELTA ]      = delta.to_ruby();
         return translate_h;
     }
-#endif
+#else
     std::ostream& Translate::to_edn(std::ostream& o) const
     {
         util::edn::Hash translate_h(2);
@@ -84,5 +87,5 @@ namespace pdftoedn
         o << translate_h;
         return o;
     }
-
+#endif
 } // namespace

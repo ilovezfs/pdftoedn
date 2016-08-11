@@ -37,9 +37,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
             virtual Rice::Object to_ruby() const;
-#endif
+#else
             virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
         private:
             std::wstring title;
             uintmax_t page;
@@ -58,9 +58,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
     private:
         std::list<Entry *> entries;
 

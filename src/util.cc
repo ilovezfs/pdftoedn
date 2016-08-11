@@ -120,7 +120,6 @@ namespace pdftoedn
             return str;
         }
 
-
         //
         // translate poppler's GfxBlendMode to the SVG equivalent, if
         // applicable

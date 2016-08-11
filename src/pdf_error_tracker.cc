@@ -69,7 +69,8 @@ namespace pdftoedn
         }
         return error_h;
     }
-#endif
+
+#else
 
     std::ostream& ErrorTracker::error::to_edn(std::ostream& o) const
     {
@@ -84,6 +85,7 @@ namespace pdftoedn
         o << h;
         return o;
     }
+#endif
 
     //
     // has this error been marked to be ignored already?
@@ -160,7 +162,8 @@ namespace pdftoedn
                        );
         return error_a;
     }
-#endif
+
+#else
 
     std::ostream& ErrorTracker::to_edn(std::ostream& o) const
     {
@@ -171,7 +174,7 @@ namespace pdftoedn
         o << v;
         return o;
     }
-
+#endif
 
     //
     // static function for registering with poppler's error handler

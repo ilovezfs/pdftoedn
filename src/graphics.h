@@ -21,13 +21,15 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream&) const;
-
+#endif
     protected:
         const pdftoedn::Symbol& cmd;
 
+#ifndef EDSEL_RUBY_GEM
         virtual util::edn::Vector& to_edn_vector(util::edn::Vector&) const;
+#endif
     };
 
 
@@ -53,9 +55,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream&) const;
-
+#endif
     protected:
         std::list<Coord> coords;
     };
@@ -128,16 +130,18 @@ namespace pdftoedn
 #ifdef EDSEL_RUBY_GEM
         // rubify
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream&) const;
-
+#endif
     protected:
         Bounds bounds;
         eShape shape;
         bool closed;
         std::list<PdfSubPathCmd *> cmds;
 
+#ifndef EDSEL_RUBY_GEM
         virtual util::edn::Hash& to_edn_hash(util::edn::Hash& h) const;
+#endif
     };
 
 
@@ -309,11 +313,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
-        // debug
-        std::ostream& dump(std::ostream& o) const;
+#endif
 
     protected:
         Type path_type;
@@ -327,8 +329,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
         Rice::Object attribs_to_ruby() const;
-#endif
+#else
         util::edn::Hash& attribs_to_edn_hash(util::edn::Hash& h) const;
+#endif
     };
 
 } // namespace

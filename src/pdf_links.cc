@@ -78,7 +78,8 @@ namespace pdftoedn
         }
         return link_h;
     }
-#endif
+
+#else
 
     util::edn::Hash& PdfLink::to_edn_hash(util::edn::Hash& link_h) const
     {
@@ -114,7 +115,7 @@ namespace pdftoedn
         o << to_edn_hash(link_h);
         return o;
     }
-
+#endif
 
     // =============================================
     // annotation links
@@ -135,7 +136,8 @@ namespace pdftoedn
 
         return link_h;
     }
-#endif
+
+#else
 
     util::edn::Hash& PdfAnnotLink::to_edn_hash(util::edn::Hash& link_h) const
     {
@@ -155,7 +157,7 @@ namespace pdftoedn
         o << to_edn_hash(link_h);
         return o;
     }
-
+#endif
 
     //
     // rubify link dest
@@ -168,7 +170,8 @@ namespace pdftoedn
         }
         return link_h;
     }
-#endif
+
+#else
 
     std::ostream& PdfAnnotLinkDest::to_edn(std::ostream& o) const
     {
@@ -185,6 +188,7 @@ namespace pdftoedn
         }
         return link_h;
     }
+#endif
 
     //
     // link goto
@@ -197,7 +201,8 @@ namespace pdftoedn
         }
         return link_h;
     }
-#endif
+
+#else
 
     std::ostream& PdfAnnotLinkGoto::to_edn(std::ostream& o) const
     {
@@ -210,5 +215,6 @@ namespace pdftoedn
         o << link_h;
         return o;
     }
+#endif
 
 } // namespace

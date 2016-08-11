@@ -23,14 +23,6 @@ namespace pdftoedn
     // module string for error reporting
     extern const char* MODULE;
 
-#ifndef __GXX_EXPERIMENTAL_CXX0X__
-    // enabled when compiled with the g++ -std=c++0x option.. the
-    // define to control it will probably change so will need to
-    // revisit later
-    typedef uint32_t char32_t;
-#endif
-
-
     // -------------------------------------------------------
     // abstract base class for all types that need to be returned as
     // ruby objects
@@ -39,13 +31,14 @@ namespace pdftoedn
         virtual ~gemable() { }
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const { return Qnil; }
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const = 0;
 
         friend std::ostream& operator<<(std::ostream& o, const gemable& g) {
             g.to_edn(o);
             return o;
         }
+#endif
     };
 
 
@@ -62,12 +55,12 @@ namespace pdftoedn
         // remove
         bool operator==(const Rice::Symbol& s) const { return (Rice::Symbol(str) == s); }
         virtual Rice::Object to_ruby() const { return Rice::Symbol(str); }
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const {
             o << ":" << str;
             return o;
         }
-
+#endif
     private:
         std::string str;
     };
@@ -89,8 +82,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
+#endif
     };
 
 
@@ -242,9 +236,9 @@ namespace pdftoedn
         // rubify
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
         static const Symbol SYMBOL;
 
     private:
@@ -288,9 +282,9 @@ namespace pdftoedn
         // returns a rubified bounding box
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
     private:
         double x_min, y_min, x_max, y_max;
 

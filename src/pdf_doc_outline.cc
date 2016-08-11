@@ -32,8 +32,7 @@ namespace pdftoedn
                        );
         return entries_a;
     }
-#endif
-
+#else
     static util::edn::Vector& entry_list_to_edn_vector(const std::list<PdfOutline::Entry *>& l, util::edn::Vector& entries_a)
     {
         //        util::edn::Vector entries_a(l.size());
@@ -42,7 +41,7 @@ namespace pdftoedn
                        );
         return entries_a;
     }
-
+#endif
 
     // ==================================================================
     // internal Entry type
@@ -52,7 +51,7 @@ namespace pdftoedn
     Rice::Object PdfOutline::to_ruby() const {
         return entry_list_to_ruby(entries);
     }
-#endif
+#else
     std::ostream& PdfOutline::to_edn(std::ostream& o) const {
         util::edn::Vector entries_v(entries.size());
         entry_list_to_edn_vector(entries, entries_v);
@@ -82,7 +81,6 @@ namespace pdftoedn
         return entry_h;
     }
 
-
     std::ostream& PdfOutline::Entry::to_edn(std::ostream& o) const
     {
         util::edn::Hash entry_h(5);
@@ -90,6 +88,7 @@ namespace pdftoedn
         o << entry_h;
         return o;
     }
+#endif
 
 #ifdef EDSEL_RUBY_GEM
     //

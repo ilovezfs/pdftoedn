@@ -116,8 +116,9 @@ namespace pdftoedn
 #ifdef EDSEL_RUBY_GEM
         // prohibit public calls
         virtual Rice::Object to_ruby() const { return Qnil; }
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const { return o; }
+#endif
     };
 
 
@@ -163,9 +164,9 @@ namespace pdftoedn
 #ifdef EDSEL_RUBY_GEM
         // rubify
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         std::ostream& to_edn(std::ostream& o) const;
-
+#endif
         static const pdftoedn::Symbol SYMBOL_TYPE_SPAN;
         static const pdftoedn::Symbol SYMBOL_ORIGIN;
         static const pdftoedn::Symbol SYMBOL_GLYPH_IDX;

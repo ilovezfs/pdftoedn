@@ -475,7 +475,8 @@ namespace pdftoedn
 
         return text_h;
     }
-#endif
+
+#else
 
     std::ostream& PdfText::to_edn(std::ostream& o) const
     {
@@ -632,6 +633,7 @@ namespace pdftoedn
         util::delete_ptr_container_elems(transforms);
         return o;
     }
+#endif
 
     // =============================================
     // PdfGlyph - unmapped character to be represented via a path

@@ -87,9 +87,9 @@ namespace pdftoedn
 #ifdef EDSEL_RUBY_GEM
         // rubify
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
     private:
         struct BitmapAttribs {
             BitmapAttribs() : stream_type(STREAM_UNDEF) { }
@@ -177,9 +177,9 @@ namespace pdftoedn
 #ifdef EDSEL_RUBY_GEM
         // rubify
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
         static const pdftoedn::Symbol SYMBOL_ID;
         static const pdftoedn::Symbol SYMBOL_INSTANCE_COUNT;
         static const pdftoedn::Symbol SYMBOL_WIDTH;
@@ -227,9 +227,9 @@ namespace pdftoedn
 #ifdef EDSEL_RUBY_GEM
         // rubify
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
         static const pdftoedn::Symbol SYMBOL_TYPE_IMAGE;
 
     private:

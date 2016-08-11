@@ -73,8 +73,7 @@ namespace pdftoedn
         cmd_a.push( cmd );
         return cmd_a;
     }
-#endif
-
+#else
     util::edn::Vector& PdfGfxCmd::to_edn_vector(util::edn::Vector& cmd_a) const
     {
         cmd_a.push( cmd );
@@ -88,6 +87,7 @@ namespace pdftoedn
         o << to_edn_vector(cmd_h);
         return o;
     }
+#endif
 
     // -------------------------------------------------------
     // coordinate-op commands
@@ -144,8 +144,7 @@ namespace pdftoedn
 
         return path_a;
     }
-#endif
-
+#else
     std::ostream& PdfSubPathCmd::to_edn(std::ostream& o) const
     {
         util::edn::Vector cmds_v(2);
@@ -168,6 +167,7 @@ namespace pdftoedn
         o << cmds_v;
         return o;
     }
+#endif
 
     // -------------------------------------------------------
     // gfx attributes helper class
@@ -348,8 +348,8 @@ namespace pdftoedn
 
         return path_h;
     }
-#endif
 
+#else
 
     util::edn::Hash& PdfPath::to_edn_hash(util::edn::Hash& path_h) const
     {
@@ -381,7 +381,7 @@ namespace pdftoedn
         o << to_edn_hash(path_h);
         return o;
     }
-
+#endif
 
     // -------------------------------------------------------
     // Document Paths
@@ -544,7 +544,8 @@ namespace pdftoedn
         }
         return attribs_h;
     }
-#endif
+
+#else
 
     //
     // doc path output
@@ -578,7 +579,6 @@ namespace pdftoedn
         o << path_h;
         return o;
     }
-
 
 
     util::edn::Hash& PdfDocPath::attribs_to_edn_hash(util::edn::Hash& attribs_h) const
@@ -651,13 +651,6 @@ namespace pdftoedn
         }
         return attribs_h;
     }
-
-
-    std::ostream& PdfDocPath::dump(std::ostream& o) const
-    {
-        o << "id: " << clip_id << ", attribs: " << attribs << std::endl
-          << bounds.bounding_box() << std::endl;
-        return o;
-    }
+#endif
 
 } // namespace

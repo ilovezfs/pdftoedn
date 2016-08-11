@@ -13,11 +13,10 @@ namespace pdftoedn
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const = 0;
         static Rice::Object list_to_ruby(const std::list<Transform*>& l);
-#endif
-
+#else
         virtual std::ostream& to_edn(std::ostream& o) const = 0;
         static util::edn::Vector& list_to_edn(const std::list<Transform*>& l, util::edn::Vector& transform_a);
-
+#endif
         static const pdftoedn::Symbol SYMBOL;
     };
 
@@ -34,9 +33,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
         static const pdftoedn::Symbol SYMBOL;
 
     private:
@@ -57,9 +56,9 @@ namespace pdftoedn
 
 #ifdef EDSEL_RUBY_GEM
         virtual Rice::Object to_ruby() const;
-#endif
+#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-
+#endif
         static const pdftoedn::Symbol SYMBOL;
 
     private:

@@ -342,8 +342,7 @@ namespace pdftoedn
 
         return font_h;
     }
-#endif
-
+#else
     std::ostream& PdfFont::to_edn(std::ostream& o) const
     {
         util::edn::Hash font_h;
@@ -474,6 +473,7 @@ namespace pdftoedn
 
         return font_h;
     }
+#endif
 
     //
     // debug
