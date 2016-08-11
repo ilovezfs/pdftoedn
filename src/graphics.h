@@ -39,6 +39,8 @@ namespace pdftoedn
     class PdfSubPathCmd : public PdfGfxCmd
     {
     public:
+        PdfSubPathCmd(const pdftoedn::Symbol& cmd_symbol) :
+            PdfGfxCmd(cmd_symbol) {}
         PdfSubPathCmd(const pdftoedn::Symbol& cmd_symbol,
                       const Coord& c) :
             PdfGfxCmd(cmd_symbol) {
@@ -63,41 +65,6 @@ namespace pdftoedn
     };
 
 
-    // -------------------------------------------------------
-    // move_to
-    //
-    struct PdfMoveTo : public PdfSubPathCmd {
-        static const pdftoedn::Symbol SYMBOL_COMMAND;
-
-        PdfMoveTo(const Coord& c) :
-            PdfSubPathCmd(SYMBOL_COMMAND, c)
-        { }
-    };
-
-    // -------------------------------------------------------
-    // curve_to
-    //
-    struct PdfCurveTo : public PdfSubPathCmd {
-        static const pdftoedn::Symbol SYMBOL_COMMAND;
-
-        PdfCurveTo(const Coord& c1, const Coord& c2, const Coord& c3) :
-            PdfSubPathCmd(SYMBOL_COMMAND, c1, c2, c3)
-        { }
-
-        virtual bool is_curved() const { return true; }
-     };
-
-    // -------------------------------------------------------
-    // line_to
-    //
-    struct PdfLineTo : public PdfSubPathCmd {
-        static const pdftoedn::Symbol SYMBOL_COMMAND;
-
-        PdfLineTo(const Coord& c) :
-            PdfSubPathCmd(SYMBOL_COMMAND, c)
-        { }
-    };
-
 
     // -------------------------------------------------------
     // path building
@@ -110,8 +77,8 @@ namespace pdftoedn
         static const pdftoedn::Symbol SYMBOL_COMMAND_LIST;
 
         // constructors - stroke or fill paths
-        PdfPath() : PdfGfxCmd(SYMBOL_TYPE_PATH), shape(UNKNOWN), closed(false) { }
-        PdfPath(const pdftoedn::Symbol& cmd_name) : PdfGfxCmd(cmd_name), shape(UNKNOWN), closed(false) { }
+        PdfPath() : PdfGfxCmd(SYMBOL_TYPE_PATH), shape(UNKNOWN) { }
+        PdfPath(const pdftoedn::Symbol& cmd_name) : PdfGfxCmd(cmd_name), shape(UNKNOWN) { }
         virtual ~PdfPath();
 
         bool equals(const PdfPath& p2) const;
@@ -136,7 +103,6 @@ namespace pdftoedn
     protected:
         Bounds bounds;
         eShape shape;
-        bool closed;
         std::list<PdfSubPathCmd *> cmds;
 
 #ifndef EDSEL_RUBY_GEM

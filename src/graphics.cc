@@ -14,18 +14,53 @@
 namespace pdftoedn
 {
     // -------------------------------------------------------
+    // move_to
+    //
+    struct PdfMoveTo : public PdfSubPathCmd {
+        static const pdftoedn::Symbol SYMBOL_COMMAND;
+
+        PdfMoveTo(const Coord& c) :
+            PdfSubPathCmd(SYMBOL_COMMAND, c)
+        { }
+    };
+
+    // -------------------------------------------------------
+    // curve_to
+    //
+    struct PdfCurveTo : public PdfSubPathCmd {
+        static const pdftoedn::Symbol SYMBOL_COMMAND;
+
+        PdfCurveTo(const Coord& c1, const Coord& c2, const Coord& c3) :
+            PdfSubPathCmd(SYMBOL_COMMAND, c1, c2, c3)
+        { }
+
+        virtual bool is_curved() const { return true; }
+     };
+
+    // -------------------------------------------------------
+    // line_to
+    //
+    struct PdfLineTo : public PdfSubPathCmd {
+        static const pdftoedn::Symbol SYMBOL_COMMAND;
+
+        PdfLineTo(const Coord& c) :
+            PdfSubPathCmd(SYMBOL_COMMAND, c)
+        { }
+    };
+
+    // -------------------------------------------------------
     // close_path
     //
-    const struct PdfClosePath : public PdfGfxCmd {
+    struct PdfClosePath : public PdfSubPathCmd {
         static const pdftoedn::Symbol SYMBOL_COMMAND;
 
         PdfClosePath() :
-            PdfGfxCmd(SYMBOL_COMMAND)
+            PdfSubPathCmd(SYMBOL_COMMAND)
         { }
-    } CLOSE_PATH_CMD;
+    };
 
 
-    // other statics
+    // const statics
     const pdftoedn::Symbol PdfGfxCmd::SYMBOL_TYPE               = "type";
 
     const pdftoedn::Symbol GfxAttribs::SYMBOL_STROKE_COLOR_IDX  = "stroke_color_idx";
@@ -133,7 +168,7 @@ namespace pdftoedn
             // own
             path_a.push( coords.back().to_ruby() );
         }
-        else {
+        else if (coords.size() > 1) {
             // store the coords in their own array
             Rice::Array coords_a;
             std::for_each( coords.begin(), coords.end(),
@@ -155,7 +190,7 @@ namespace pdftoedn
             // own
             cmds_v.push( &coords.back() );
         }
-        else {
+        else if (coords.size() > 1) {
             // there are more than one (or, zero, I guess but that
             // would be odd). Wrap the coords in an array
             util::edn::Vector coords_a(coords.size());
@@ -203,7 +238,7 @@ namespace pdftoedn
     {
         o << "  S: " << stroke << std::endl
           << "  F: " << fill << std::endl
-          << "   lw: " << line_width
+          << "  lw: " << line_width
           << ", ml: " << miter_limit
           << ", lc: " << (int) line_cap
           << ", lj: " << (int) line_join
@@ -295,7 +330,7 @@ namespace pdftoedn
     // mark a path closed
     void PdfPath::close()
     {
-        closed = true;
+        cmds.push_back( new PdfClosePath );
 
         // check if rectangular
         if (shape == UNKNOWN && cmds.size() == 5) {
@@ -333,9 +368,6 @@ namespace pdftoedn
         std::for_each( cmds.begin(), cmds.end(),
                        [&](const PdfSubPathCmd *c) { path_a.push(c->to_ruby()); }
                        );
-        if (closed) {
-            path_a.push( CLOSE_PATH_CMD.to_ruby() );
-        }
 
         // ready to produce the output - a hash contains the commands
         // and attributes
@@ -364,9 +396,6 @@ namespace pdftoedn
         std::for_each( cmds.begin(), cmds.end(),
                        [&](const PdfSubPathCmd *c) { path_a.push(c); }
                        );
-        if (closed) {
-            path_a.push( &CLOSE_PATH_CMD );
-        }
 
         path_h.push( SYMBOL_COMMAND_LIST, path_a );
 
