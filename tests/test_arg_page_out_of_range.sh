@@ -1,18 +1,21 @@
 #!/bin/sh
 
-. ./common.sh
+[[ "x${TESTS_DIR}" == "x" ]] && TESTS_DIR="."
+. ${TESTS_DIR}/test_common.sh
 
 test_start
 
 
-# document has 6 pages - try to process page 7
-$PDFTOEDN -p 6 -o $TMPFILE $TESTDOC 2> /dev/null
+# document has 6 pages - try to process page 7. Note page arg is
+# 0-indexed
+pg=6
+$PDFTOEDN -p $pg -o $TMPFILE $TESTDOC
 status=$?
 
 
 test_end
-if [ $status -ne 0 ]; then
+if [[ $status -eq 1 ]]; then
     exit 0
 fi
-echo "Error page outside of range was accepted!"
-exit 1
+echo "Error page ($pg) outside of range was accepted!"
+exit $status

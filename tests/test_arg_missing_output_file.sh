@@ -1,17 +1,18 @@
 #!/bin/sh
 
-. ./common.sh
+[[ "x${TESTS_DIR}" == "x" ]] && TESTS_DIR="."
+. ${TESTS_DIR}/test_common.sh
 
 test_start
 
 # test missing -o option
-$PDFTOEDN $TESTDOC 2> /dev/null
-RET=$?
+$PDFTOEDN $TESTDOC
+status=$?
 
 
 test_end
-if [ $RET -ne 0 ]; then
+if [ $status -eq 1 ]; then
     exit 0
 fi
 echo "Error missing output file was accepted!"
-exit 1
+exit $status

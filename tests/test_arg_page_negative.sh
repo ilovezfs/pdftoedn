@@ -1,19 +1,20 @@
 #!/bin/sh
 
-. ./common.sh
+[[ "x${TESTS_DIR}" == "x" ]] && TESTS_DIR="."
+. ${TESTS_DIR}/test_common.sh
 
 test_start
 
 
 # try to pass a negative page argument
-$PDFTOEDN -p -1 -o $TMPFILE $TESTDOC 2> /dev/null
+$PDFTOEDN -p -1 -o $TMPFILE $TESTDOC
 status=$?
 
 
 test_end
 
-if [ $status -ne 0 ]; then
+if [ $status -eq 1 ]; then
     exit 0
 fi
 echo "Error page -1 was accepted!"
-exit 1
+exit $status

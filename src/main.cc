@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 {
     // pass things back as utf-8
     if (!std::setlocale( LC_ALL, "" )) {
-        std::cerr << "Error setting locale" << std::endl;
+        std::cout << "Error setting locale" << std::endl;
         return -1;
     }
 
@@ -109,23 +109,23 @@ int main(int argc, char** argv)
                 intmax_t pg = vm["page_number"].as<intmax_t>();
                 if (pg < 0) {
                     std::cout << "Invalid page number " << pg << std::endl;
-                    return -1;
+                    return 1;
                 }
             }
             po::notify(vm);
         }
         catch (po::error& e) {
-            std::cerr << "Error parsing program arguments: " << e.what() << std::endl
+            std::cout << "Error parsing program arguments: " << e.what() << std::endl
                       << std::endl
                       << opts << std::endl;
-            return -1;
+            return 1;
         }
     }
     catch (std::exception& e)
     {
-        std::cerr << "Argument error: " << std::endl
+        std::cout << "Argument error: " << std::endl
                   << e.what() << std::endl;
-        return -1;
+        return 1;
     }
 
     //
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
         pdftoedn::options = pdftoedn::Options(filename, font_map_file, output_file, flags, (page_number >= 0 ? page_number : -1));
     }
     catch (std::exception& e) {
-        return -1;
+        return 2;
     }
 
     // dump the font map list and exit if the -F flag was passed
@@ -163,23 +163,23 @@ int main(int argc, char** argv)
     // generate output, ensure the page number given is within range
     if (pdftoedn::options.page_number() > 0 &&
         pdftoedn::options.page_number() >= doc_reader.getNumPages()) {
-        std::cerr << "Error: requested page number " << pdftoedn::options.page_number()
+        std::cout << "Error: requested page number " << pdftoedn::options.page_number()
                   << " is not valid. Document has "
                   << doc_reader.getNumPages() << " page"
                   << ((doc_reader.getNumPages() > 1) ? 's' : '\0')
                   << " and value must be 0-indexed."
                   << std::endl;
         delete globalParams;
-        return -1;
+        return 1;
     }
 
     std::ofstream output;
     output.open(pdftoedn::options.outputfile().c_str());
 
     if (!output.is_open()) {
-        std::cerr << pdftoedn::options.outputfile()
+        std::cout << pdftoedn::options.outputfile()
                   << "Cannot open file for write" << std::endl;
-        return -1;
+        return 1;
     }
 
     // write the document data
