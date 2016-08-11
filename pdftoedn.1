@@ -76,7 +76,7 @@ Process only the first page of the document file1.pdf. Note that the
 value should be 0-indexed and that the number of pages can't be
 determined until the document's \fI:meta\fR has been read. Also, the
 output will contain only one entry in the \fI:pages\fR array and the
-entry will be at index 0 (however, the has contains a \fI:pg_num\fR
+entry will be at index 0 (however, the has contains a \fI:pgnum\fR
 entry to indicate the document's page number (1-indexed):
 .sp
 .if n \{\
@@ -89,13 +89,14 @@ $ pdftoedn \-p 0 \-o file1.edn file1.pdf
 .RE
 .\}
 .PP
-Process the document file1.pdf using the font map file ~/.pdftoedn/fontmap1.json:
+Process the document file1.pdf using the font map file
+fontmap1.json:
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
-$ pdftoedn \-m fontmap1 \-o file1.edn file1.pdf
+$ pdftoedn \-m fontmap1.json \-o file1.edn file1.pdf
 .fi
 .if n \{\
 .RE
@@ -110,6 +111,9 @@ reading page content.
 \fB\-D\fR [ \fB\-\-debug_meta\fR ]
 Include additional debug metadata in output.
 .TP
+\fB\-F\fR [ \fB\-\-show_font_map_list\fR ]
+Display the configured font substitution list and exit.
+.TP
 \fB\-f\fR [ \fB\-\-force_output\fR ]
 Overwrite output file if it exists.
 .TP
@@ -120,9 +124,11 @@ OCR'd documents).
 \fB\-l\fR [ \fB\-\-links_only\fR ]
 Extract only link data.
 .TP
-\fB\-m\fR [ \fB\-\-font_map_file\fR ] filename[.json]
-JSON font mapping configuration file to use for this run. File is read
-from the ~/.pdftoedn/ directory.
+\fB\-m\fR [ \fB\-\-font_map_file\fR ] filename.json
+JSON font mapping configuration file to use for this run.
+A relative path can be specified. Alternatively,
+.B pdftoedn
+will look for it in ~/.pdftoedn.
 .TP
 \fB\-O\fR [ \fB\-\-omit_outline\fR ]
 Don't extract outline data.

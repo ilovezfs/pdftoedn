@@ -1,6 +1,6 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-m4_define([pdftoedn_version],[0.32.1])
+m4_define([pdftoedn_version],[0.32.2])
 
 AC_PREREQ([2.68])
 AC_INIT([pdftoedn], [pdftoedn_version], [ed@motologic.com])
