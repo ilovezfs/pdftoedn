@@ -9,7 +9,7 @@ BZIP2="bzip2 -k"
 BUNZIP2="$BZIP2 -d"
 
 test_start() {
-    if [ ! -f "$PDFTOEDN" ]; then
+    if [ ! -x "$PDFTOEDN" ]; then
         export PDFTOEDN=`which pdftoedn`
 
         if [ -z "$PDFTOEDN" ]; then
@@ -23,5 +23,5 @@ test_start() {
 
 
 test_end() {
-    $RM $TMPFILE
+    [[ -f "$TMPFILE" ]] && $RM "$TMPFILE"
 }

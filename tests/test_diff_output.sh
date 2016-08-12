@@ -8,16 +8,25 @@ test_start
 # process the PDFs in the docs and compare their output to the one
 # saved
 status=0
-for file in "${TESTS_DIR}/docs"/*.pdf
+for file in "${TESTS_DIR}/docs"/*.bz2
 do
-    REFEDN="${file%.*}.edn"
+    REFEDN="${file%.*}"
+    SRCPDF="${REFEDN%.*}.pdf"
+    FONTMAP="${REFEDN%.*}.json"
+    ARGS="-f"
 
     # uncompress the reference output if needed
-    if [ ! -f $REFEDN ]; then
-        $BUNZIP2 "$REFEDN.bz2"
+    if [[ ! -f "$REFEDN" ]]; then
+        $BUNZIP2 "$file"
     fi
 
-    cmd="$PDFTOEDN -f -o $TMPFILE $file"
+    # if there's a fontmap available for the doc, use it
+    if [[ -f "$FONTMAP" ]]; then
+        ARGS="$ARGS -m "$FONTMAP""
+    fi
+
+    # process the PDF
+    cmd="$PDFTOEDN $ARGS -o "$TMPFILE" "$SRCPDF""
     echo $cmd
     `$cmd`
     status=$?
@@ -27,11 +36,10 @@ do
         break
     fi
 
-
     # remove the filename string and version strings hash so it
     # doesn't cause diff output on version bumps
-    cat $TMPFILE | sed 's/:versions {[a-z0-9\:\"\.\, \-]*}/:versions {}/' | sed 's/:filename "[a-zA-z0-9\.\-\/]*"/:filename ""/' > t1.tmp
-    cat $REFEDN  | sed 's/:versions {[a-z0-9\:\"\.\, \-]*}/:versions {}/' | sed 's/:filename "[a-zA-z0-9\.\-\/]*"/:filename ""/' > t2.tmp
+    cat $TMPFILE | sed 's/:versions {[a-z0-9\:\"\.\, \-]*}/:versions {}/' | sed 's/:filename "[a-zA-z0-9\.\-/]*"/:filename ""/' > t1.tmp
+    cat $REFEDN  | sed 's/:versions {[a-z0-9\:\"\.\, \-]*}/:versions {}/' | sed 's/:filename "[a-zA-z0-9\.\-/]*"/:filename ""/' > t2.tmp
 
     $DIFF t1.tmp t2.tmp &> /dev/null
     status=$?

@@ -8,7 +8,9 @@ echo "$0"
 test_start
 
 # test processing an invalid PDF
-$PDFTOEDN -o dummy.edn "$0"
+cmd="${PDFTOEDN} -o dummy.edn $0"
+echo $cmd
+`$cmd`
 status=$?
 
 echo status is $status

@@ -1,0 +1,26 @@
+{
+    "fontMaps": {
+        "scimakeFonts":
+        {
+            "entries":
+            [
+                [ "NimbusRomNo9L-ReguItal",        "Times New Roman",    [ "italic" ],     [ "standardMap" ] ],
+                [ "NimbusRomNo9L-Regu",            "Times New Roman",    [],               [ "Nimbus", "standardMap" ] ],
+                [ "_comment_",   [ "The CMR rule catches both CMR7 and CMR10. CMMI10 is technically Italic but the table only carries",
+                                   "lowercase n. I could have defined 'CMMI10' to use the 'italic' style but this example shows",
+                                   "how to remap the glyph. See the cmrMap below." ] ],
+                [ "CMMI10",                        "Times New Roman",    [],               [ "cmrMap" ] ],
+                [ "CMR",                           "Times New Roman",    [],               [ "standardMap" ] ]
+            ]
+        }
+    },
+    "glyphMaps": {
+        "Nimbus": {
+            "hungarumlauts": "$"
+        },
+        "cmrMap": {
+            "_comment_": "mathematical italic small n. See: http://www.fileformat.info/info/unicode/char/1d45b/index.htm",
+            "n":     119899
+        }
+    }
+}
