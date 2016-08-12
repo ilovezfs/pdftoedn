@@ -79,12 +79,22 @@ namespace pdftoedn {
 
         // check input font map to make sure it's valid
         if (!fontmap.empty()) {
-            boost::filesystem::path mapfile(DEFAULT_CONFIG_DIR);
-            mapfile.append(fontmap).replace_extension(FONT_MAP_FILE_EXT);
+            // check the name in case it's passed with an absolute path
+            try
+            {
+                if (util::fs::check_valid_input_file(fontmap)) {
+                    f_map = fontmap;
+                }
 
-            // set the absolute path to the font map, then check it
-            if (util::fs::check_valid_input_file(mapfile)) { // throws if error
-                f_map = mapfile.string();
+            } catch (std::exception& e) {
+                // otherwise, load from the config directory
+                boost::filesystem::path mapfile(DEFAULT_CONFIG_DIR);
+                mapfile.append(fontmap).replace_extension(FONT_MAP_FILE_EXT);
+
+                // set the absolute path to the font map, then check it
+                if (util::fs::check_valid_input_file(mapfile)) { // throws if error
+                    f_map = mapfile.string();
+                }
             }
         }
 
@@ -140,12 +150,12 @@ namespace pdftoedn {
 
     //
     // create absolute and relative image paths
-    bool Options::get_image_path(intmax_t img_id, std::string& image_path) const
+    bool Options::get_image_path(intmax_t img_id, std::string& image_path, bool create_res_dir) const
     {
         boost::filesystem::path file_path(resource_dir);
 
         // ensure the resource dir exists
-        if (!util::fs::create_fs_dir(file_path)) {
+        if (create_res_dir && !util::fs::create_fs_dir(file_path)) {
             return false;
         }
 
@@ -182,7 +192,7 @@ namespace pdftoedn {
         {
             // image path test
             std::string test;
-            opt.get_image_path(1, test);
+            opt.get_image_path(1, test, false);
             o << "   Image output test: " << test << std::endl
               << "   Relative img test: " << opt.get_image_rel_path(test) << std::endl;
         }

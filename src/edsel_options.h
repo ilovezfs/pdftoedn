@@ -29,7 +29,7 @@ namespace pdftoedn {
         const std::string& outputfile() const    { return output_file; }
         intmax_t page_number() const             { return page_num; }
 
-        bool get_image_path(intmax_t id, std::string& abs_file_path) const;
+        bool get_image_path(intmax_t id, std::string& abs_file_path, bool create_res_dir = true) const;
         std::string get_image_rel_path(const std::string& abs_path) const;
 
         bool omit_outline() const                { return flags.omit_outline; }
