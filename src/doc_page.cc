@@ -296,11 +296,15 @@ namespace pdftoedn
             span_bbox = span_bbox.clip( clip_paths[ span_clip_path_id ]->bounding_box() );
         }
 
+#if 0
         // remove any spans this one "overwrites"
+        //
+        // TODO: FIX ME. Should resolve this by keeping paint order of
+        // text along w/ graphics
         if (!span->CTM().is_rotated()) {
             remove_spans_overlapped_by_span( *span );
         }
-
+#endif
         // insert it into the list
         text_spans.insert(text_spans.end(), span);
 
