@@ -55,10 +55,6 @@ namespace pdftoedn {
         std::string string_to_utf(const std::string& str);
         std::string string_to_utf(const std::wstring& str);
         std::wstring string_to_iso8859(const char* str);
-#ifdef EDSEL_RUBY_GEM
-        Rice::String string_to_ruby(std::string const& s);
-        Rice::String wstring_to_ruby(std::wstring const& w_str);
-#endif
         std::string wstring_to_utfstring(std::wstring const& w_str);
 
         std::wstring unicode_to_wstring(const Unicode* const u, int len);

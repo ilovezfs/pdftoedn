@@ -35,7 +35,6 @@ namespace pdftoedn {
 
 } // namespace
 
-#ifndef EDSEL_RUBY_GEM
 
 int main(int argc, char** argv)
 {
@@ -194,5 +193,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-
-#endif // EDSEL_RUBY_GEM

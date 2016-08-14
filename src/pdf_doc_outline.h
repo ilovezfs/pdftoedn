@@ -35,11 +35,8 @@ namespace pdftoedn
 
             std::list<Entry *>& get_entry_list() { return entries; }
 
-#ifdef EDSEL_RUBY_GEM
-            virtual Rice::Object to_ruby() const;
-#else
             virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         private:
             std::wstring title;
             uintmax_t page;
@@ -56,11 +53,8 @@ namespace pdftoedn
         std::list<PdfOutline::Entry *>& get_entry_list() { return entries; }
         bool has_content() const { return !entries.empty(); }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
     private:
         std::list<Entry *> entries;
 

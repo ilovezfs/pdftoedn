@@ -21,11 +21,7 @@ namespace pdftoedn
     // ----------------------------------
     //
     struct Color : gemable {
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const = 0;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const = 0;
-#endif
     };
 
     // ----------------------------------
@@ -49,11 +45,8 @@ namespace pdftoedn
             return (r == red && g == green && b == blue);
         }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
     private:
         color_comp_t r, g, b;
     };

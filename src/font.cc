@@ -1,10 +1,6 @@
 #include <ostream>
 #include <set>
 
-#ifdef EDSEL_RUBY_GEM
-#include <rice/Hash.hpp>
-#endif
-
 #include "pdf_font_source.h"
 #include "font.h"
 #include "font_maps.h"
@@ -218,131 +214,8 @@ namespace pdftoedn
         return REMAP_FAIL;
     }
 
-#ifdef EDSEL_RUBY_GEM
     //
-    // rubify font instance
-    Rice::Object PdfFont::to_ruby() const
-    {
-        Rice::Hash font_h;
-
-        // font name
-        std::string font_name(util::string_to_utf(font_src->font_name()));
-        font_h[ SYMBOL_ORIGINAL_NAME ]               = font_name;
-        font_h[ PdfFont::SYMBOL_FAMILY ]             = font_data->output_font();
-
-        // family type
-        static const pdftoedn::Symbol SYMBOL_FAMILY_TYPES[]      = {
-            "monospace", "serif", "sans_serif"
-        };
-        font_h[ SYMBOL_GENERAL_FAMILY ]              = SYMBOL_FAMILY_TYPES[ font_src->font_general_family_type() ];
-
-        // font collection, if applicable
-        if (font_src->is_cid()) {
-            font_h[ SYMBOL_COLLECTION ]              = font_src->font_collection();
-        }
-
-        // font type
-        static const pdftoedn::Symbol SYMBOL_FONT_TYPES[]        = {
-            "unknown", "type1", "type1c", "type1cot", "type3", "truetype",
-            "truetype0t", "cidtype0", "cidtype0c", "cidtype0cot", "cidtype2", "cidtype2ot"
-        };
-
-        // get index into SYMBOL_FONT_TYPES[]
-        uint8_t font_type_idx = 0;
-        switch (font_src->font_type()) {
-          case FontSource::FONT_TYPE_TYPE1:       font_type_idx = 1; break;
-          case FontSource::FONT_TYPE_TYPE1C:      font_type_idx = 2; break;
-          case FontSource::FONT_TYPE_TYPE1COT:    font_type_idx = 3; break;
-          case FontSource::FONT_TYPE_TYPE3:       font_type_idx = 4; break;
-          case FontSource::FONT_TYPE_TRUETYPE:    font_type_idx = 5; break;
-          case FontSource::FONT_TYPE_TRUETYPEOT:  font_type_idx = 6; break;
-          case FontSource::FONT_TYPE_CIDTYPE0:    font_type_idx = 7; break;
-          case FontSource::FONT_TYPE_CIDTYPE0C:   font_type_idx = 8; break;
-          case FontSource::FONT_TYPE_CIDTYPE0COT: font_type_idx = 9; break;
-          case FontSource::FONT_TYPE_CIDTYPE2:    font_type_idx = 10; break;
-          case FontSource::FONT_TYPE_CIDTYPE2OT:  font_type_idx = 11; break;
-          case FontSource::FONT_TYPE_UNKNOWN:
-          default: break;
-        }
-        font_h[ SYMBOL_TYPE ]                    = SYMBOL_FONT_TYPES[ font_type_idx ];
-
-        // font style attributes, if present
-        if (is_bold()) {
-            font_h[ PdfFont::SYMBOL_STYLE_BOLD ]     = true;
-        }
-
-        if (is_italic()) {
-            font_h[ PdfFont::SYMBOL_STYLE_ITALIC ]   = true;
-        }
-
-        if (font_src->is_all_cap()) {
-            font_h[ PdfFont::SYMBOL_STYLE_ALL_CAPS ] = true;
-        }
-
-        if (font_src->is_small_cap()) {
-            font_h[ PdfFont::SYMBOL_STYLE_SMALL_CAPS ] = true;
-        }
-
-        const EntityMapPtrList& mappers = font_data->mapper_list();
-        if (!mappers.empty()) {
-            Rice::Array mapper_a;
-            std::for_each( mappers.begin(), mappers.end(),
-                           [&](const EntityMap* m) { mapper_a.push(m->name()); }
-                           );
-            font_h [ SYMBOL_MAPPERS ]                = mapper_a;
-        }
-
-        // encoding, if present
-        const Encoding* enc = font_src->get_encoding();
-        if (enc) {
-            font_h[ SYMBOL_ENCODING ]                = Encoding::SYMBOL_TYPE[ enc->type() ];
-        }
-
-        // if we've tagged this as a font we must export
-        if (font_data->is_unknown_font()) {
-            font_h[ SYMBOL_EXPORTED ]                = true;
-        }
-        else {
-            // otherwise, report any warnings we encountered
-            Rice::Array warn_a;
-
-            // if it's embedded
-            if (is_embedded()) {
-                font_h[ SYMBOL_EMBEDDED ]            = true;
-
-                // include the C2G table's md5 if there's one
-                if (font_src->has_code_to_gid()) {
-                    font_h[ SYMBOL_C2G_MD5 ]          = font_src->md5();
-                }
-            }
-
-            // if we've remapped glyphs on this font
-            if (has_replacement_glyph_map()) {
-                // report any we've missed
-                if (has_unmapped_codes()) {
-                    warn_a.push( SYMBOL_HAS_UNMAPPED_GLYPHS );
-
-                    std::stringstream err;
-                    err << "Font '" << font_name << "' has unmapped codes";
-                    pdftoedn::et.log_warn(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, err.str());
-                }
-            } else if (!font_src->has_to_unicode()) {
-                warn_a.push( SYMBOL_NO_UNICODE_MAP );
-
-                std::stringstream err;
-                err << "No subst map for '" << font_name << "'";
-                pdftoedn::et.log_warn(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, err.str());
-            }
-
-            // add warnings array if any found
-            if (warn_a.size() > 0) {
-                font_h[ SYMBOL_WARNINGS ]          = warn_a;
-            }
-        }
-
-        return font_h;
-    }
-#else
+    // Pdf Font output - only included in :meta if an option is passed
     std::ostream& PdfFont::to_edn(std::ostream& o) const
     {
         util::edn::Hash font_h;
@@ -473,7 +346,7 @@ namespace pdftoedn
 
         return font_h;
     }
-#endif
+
 
     //
     // debug

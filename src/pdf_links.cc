@@ -1,7 +1,3 @@
-#ifdef EDSEL_RUBY_GEM
-#include <rice/Hash.hpp>
-#endif
-
 #include "pdf_links.h"
 #include "util.h"
 #include "util_edn.h"
@@ -46,41 +42,8 @@ namespace pdftoedn
         orientation = BOTTOM_RIGHT;
     }
 
-#ifdef EDSEL_RUBY_GEM
     //
-    // rubify
-    Rice::Object PdfLink::to_ruby() const
-    {
-        Rice::Hash link_h;
-
-        //
-        // only indicate any values set
-        if (orientation == TOP_LEFT) {
-            if (pos.y > 0) {
-                link_h[ SYMBOL_POS_TOP ]    = pos.y;
-            }
-
-            if (pos.x > 0) {
-                link_h[ SYMBOL_POS_LEFT ]   = pos.x;
-            }
-        } else {
-            if (pos.y > 0) {
-                link_h[ SYMBOL_POS_BOTTOM ] = pos.y;
-            }
-            if (pos.x > 0) {
-                link_h[ SYMBOL_POS_RIGHT ]  = pos.x;
-            }
-        }
-
-        // and zoom
-        if (zoom != -1) {
-            link_h[ SYMBOL_ZOOM ]           = zoom;
-        }
-        return link_h;
-    }
-
-#else
-
+    // output the link as EDN
     util::edn::Hash& PdfLink::to_edn_hash(util::edn::Hash& link_h) const
     {
         //
@@ -115,30 +78,11 @@ namespace pdftoedn
         o << to_edn_hash(link_h);
         return o;
     }
-#endif
+
 
     // =============================================
     // annotation links
     //
-
-    //
-    // rubify
-#ifdef EDSEL_RUBY_GEM
-    Rice::Object PdfAnnotLink::to_ruby() const
-    {
-        Rice::Hash link_h = PdfLink::to_ruby();
-
-        link_h[ SYMBOL_TYPE ]         = SYMBOL_ACTION_TYPES[ type ];
-        if (effect != EFFECT_NONE) {
-            link_h[ SYMBOL_EFFECT ]   = SYMBOL_EFFECTS[ effect ];
-        }
-        link_h[ BoundingBox::SYMBOL ] = bbox.to_ruby();
-
-        return link_h;
-    }
-
-#else
-
     util::edn::Hash& PdfAnnotLink::to_edn_hash(util::edn::Hash& link_h) const
     {
         PdfLink::to_edn_hash(link_h);
@@ -157,22 +101,10 @@ namespace pdftoedn
         o << to_edn_hash(link_h);
         return o;
     }
-#endif
+
 
     //
     // rubify link dest
-#ifdef EDSEL_RUBY_GEM
-    Rice::Object PdfAnnotLinkDest::to_ruby() const
-    {
-        Rice::Hash link_h = PdfAnnotLink::to_ruby();
-        if (dest.length() > 0) {
-            link_h[ SYMBOL_DEST ]     = util::wstring_to_ruby(util::string_to_iso8859(dest.c_str()));
-        }
-        return link_h;
-    }
-
-#else
-
     std::ostream& PdfAnnotLinkDest::to_edn(std::ostream& o) const
     {
         util::edn::Hash link_h(7);
@@ -188,22 +120,9 @@ namespace pdftoedn
         }
         return link_h;
     }
-#endif
 
     //
     // link goto
-#ifdef EDSEL_RUBY_GEM
-    Rice::Object PdfAnnotLinkGoto::to_ruby() const
-    {
-        Rice::Hash link_h = PdfAnnotLinkDest::to_ruby();
-        if (page != -1) {
-            link_h[ SYMBOL_PAGE ]     = page;
-        }
-        return link_h;
-    }
-
-#else
-
     std::ostream& PdfAnnotLinkGoto::to_edn(std::ostream& o) const
     {
         util::edn::Hash link_h(7);
@@ -215,6 +134,5 @@ namespace pdftoedn
         o << link_h;
         return o;
     }
-#endif
 
 } // namespace

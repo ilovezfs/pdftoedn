@@ -1,11 +1,5 @@
 #include <list>
 
-#ifdef EDSEL_RUBY_GEM
-// always include rice headers before ruby.h
-#include <rice/Array.hpp>
-#include <rice/Hash.hpp>
-#endif
-
 #include <poppler/goo/GooList.h>
 #include <poppler/Outline.h>
 #include <poppler/Link.h>
@@ -126,81 +120,9 @@ namespace pdftoedn
         return true;
     }
 
-#ifdef EDSEL_RUBY_GEM
+
     //
-    // basic PDF info, document number of pages, outline
-    Rice::Object PDFReader::meta()
-    {
-        Rice::Hash meta_h;
-
-        meta_h[ util::version::SYMBOL_DATA_FORMAT_VERSION ] = util::version::data_format_version();
-        meta_h[ SYMBOL_PDF_FILENAME ]                       = pdftoedn::options.filename();
-        meta_h[ SYMBOL_PDF_DOC_OK ]                         = isOk();
-        meta_h[ SYMBOL_FONT_ENG_OK ]                        = font_engine.is_ok();
-
-        if (font_engine.found_font_warnings()) {
-            meta_h[ SYMBOL_FONT_ENG_FONT_WARN ]             = true;
-        }
-
-        if (isOk()) {
-
-            meta_h[ SYMBOL_PDF_MAJ_VER ]                    = getPDFMajorVersion();
-            meta_h[ SYMBOL_PDF_MIN_VER ]                    = getPDFMinorVersion();
-
-            meta_h[ SYMBOL_PDF_NUM_PAGES ]                  = getNumPages();
-
-            // outline - empty hash if none
-            meta_h[ SYMBOL_PDF_OUTLINE ]                    = outline_output.to_ruby();
-
-            // save the sorted list of font sizes read in the document
-            // - to be used in case we need to generate an outline by
-            // examining page content. This is only done if the
-            // force_font_preprocess option was specified
-            const std::set<double>& font_size_list = font_engine.get_font_size_list();
-            if (!font_size_list.empty()) {
-                Rice::Array font_size_a;
-                std::for_each( font_size_list.rbegin(), font_size_list.rend(),
-                               [&](const double& d) { font_size_a.push(d); }
-                               );
-                meta_h[ SYMBOL_PDF_DOC_FONT_SIZES ]     = font_size_a;
-            }
-
-            // include document fonts in meta if requested
-            if (pdftoedn::options.include_debug_info())
-            {
-                // document font list
-                Rice::Array font_a;
-
-                const FontList& fonts = font_engine.get_font_list();
-
-                uintmax_t idx = 0;
-                std::for_each( fonts.begin(), fonts.end(),
-                               [&](const std::pair<const pdftoedn::PdfRef, pdftoedn::PdfFont *>& p) {
-                                   Rice::Hash font_h = p.second->to_ruby();
-                                   font_h[ PdfPage::SYMBOL_FONT_IDX ] = idx++;
-                                   font_a.push(font_h);
-                               } );
-                meta_h[ SYMBOL_PDF_DOC_FONTS ] = font_a;
-            }
-        }
-        else if (getErrorCode() == errEncrypted) {
-            // if we're not able to process the doc because it was
-            // encrypted, we'll indicate so here.
-            meta_h[ SYMBOL_PDF_ENCRYPTED ]                  = true;
-        }
-
-        meta_h[ SYMBOL_VERSIONS ]                           = util::version::libs(font_engine);
-
-        // if we caught errors, include them
-        if (et.errors_reported()) {
-            meta_h[ ErrorTracker::SYMBOL_ERRORS ]           = et.to_ruby();
-        }
-
-        return meta_h;
-    }
-
-#else
-
+    // document meta output in EDN format
     std::ostream& PDFReader::meta(std::ostream& o) {
         util::edn::Hash meta_h(14);
 
@@ -270,7 +192,7 @@ namespace pdftoedn
         o << meta_h;
         return o;
     }
-#endif
+
 
     //
     // calls poppler's display page with the necessary parameters
@@ -282,34 +204,6 @@ namespace pdftoedn
         displayPage(dev, page_num, DPI_72, DPI_72, 0, gFalse, gTrue, gFalse);
     }
 
-
-#ifdef EDSEL_RUBY_GEM
-    //
-    // extract the document page data
-    Rice::Object PDFReader::process_page(uintmax_t page_num)
-    {
-        Rice::Hash page_h;
-        uintmax_t num_pages = getNumPages();
-
-        // poppler is 1-based so adjust
-        page_num += 1;
-
-        if (page_num <= num_pages) {
-
-            // process the PDF info on this page
-            display_page(eng_odev, page_num);
-
-            const PdfPage* page_output = eng_odev->page_output();
-
-            if (page_output) {
-                page_h = page_output->to_ruby();
-            }
-        }
-
-        return page_h;
-    }
-
-#else
 
     //
     // extract the document page data
@@ -334,7 +228,6 @@ namespace pdftoedn
 
         return o;
     }
-
 
     std::ostream& operator<<(std::ostream& o, PDFReader& doc)
     {
@@ -365,7 +258,7 @@ namespace pdftoedn
         o << "]}";
         return o;
     }
-#endif
+
 
     //
     // extract the outline data

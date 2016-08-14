@@ -81,11 +81,8 @@ namespace pdftoedn
             }
             bool higher_than(level floor) const { return (lvl > floor); }
 
-#ifdef EDSEL_RUBY_GEM
-            virtual Rice::Object to_ruby() const;
-#else
             virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         private:
             error_type type;
             level lvl;
@@ -120,11 +117,8 @@ namespace pdftoedn
         bool errors_or_warnings_reported() const { return !errors.empty(); }
         void flush_errors();
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         // method to register error handler w/ poppler
         static void error_handler(void *data, ErrorCategory category, Goffset pos, char *msg);
 

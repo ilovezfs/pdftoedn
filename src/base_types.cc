@@ -7,11 +7,6 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#ifdef EDSEL_RUBY_GEM
-#include <rice/Array.hpp>
-#include <rice/Hash.hpp>
-#endif
-
 #include "base_types.h"
 #include "util_edn.h"
 
@@ -35,19 +30,6 @@ namespace pdftoedn
 
     // =============================================
     // Coordinates
-
-#ifdef EDSEL_RUBY_GEM
-    //
-    // coord rubifying
-    Rice::Object Coord::to_ruby() const
-    {
-        // format: [x, y]
-        Rice::Array coord_a;
-        coord_a.push(x);
-        coord_a.push(y);
-        return coord_a;
-    }
-#else
     std::ostream& Coord::to_edn(std::ostream& o) const
     {
         util::edn::Vector v(2);
@@ -56,7 +38,6 @@ namespace pdftoedn
         o << v;
         return o;
     }
-#endif
 
     // =============================================
     // transform matrix
@@ -357,18 +338,8 @@ namespace pdftoedn
                  );
     }
 
-#ifdef EDSEL_RUBY_GEM
-    //
-    // rubify a bounding box
-    Rice::Object BoundingBox::to_ruby() const
-    {
-        Rice::Array bbox_a;
-        // output bounds based on min/max
-        bbox_a.push( c1.to_ruby() );
-        bbox_a.push( c2.to_ruby() );
-        return bbox_a;
-    }
-#else
+
+    // output a bounding box
     std::ostream& BoundingBox::to_edn(std::ostream& o) const
     {
         util::edn::Vector v(2);
@@ -377,7 +348,6 @@ namespace pdftoedn
         o << v;
         return o;
     }
-#endif
 
     // =============================================
     // Bounds-builder
@@ -457,23 +427,9 @@ namespace pdftoedn
             y_max = y_min;
         }
     }
-#ifdef EDSEL_RUBY_GEM
+
     //
-    // rubify
-    Rice::Object Bounds::to_ruby() const {
-        // check if we've expanded any of the values. If not, x_min is
-        // still set to std::numeric_limits<double>::max() so compare
-        // if it's an unreasonable value like it. Rather than checking
-        // if equal, see if it's more than half of max() - this should
-        // be beyond resonable for PDF content
-        if (x_min > Bounds::COORD_HALF_MAX_VALUE) {
-            // not set. This is likely due to the Bounds instance not
-            // being expanded. Return a [[0, 0], [0, 0]] bbox
-            return BoundingBox(0, 0, 0, 0).to_ruby();
-        }
-        return bounding_box().to_ruby();
-    }
-#else
+    // output Bounds
     std::ostream& Bounds::to_edn(std::ostream& o) const
     {
         // check if we've expanded any of the values. If not, x_min is
@@ -491,5 +447,5 @@ namespace pdftoedn
 
         return o;
     }
-#endif
+
 } // namespace

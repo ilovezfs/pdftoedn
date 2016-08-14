@@ -84,12 +84,8 @@ namespace pdftoedn
         bool is_inverted() const { return mask.invert; }
         const RGBColor& mask_fill_color() const { return mask.fill; }
 
-#ifdef EDSEL_RUBY_GEM
-        // rubify
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
     private:
         struct BitmapAttribs {
             BitmapAttribs() : stream_type(STREAM_UNDEF) { }
@@ -174,12 +170,8 @@ namespace pdftoedn
         void ref() const { ref_count++; }
         bool equals(int id) const { return (res_id == id); }
 
-#ifdef EDSEL_RUBY_GEM
-        // rubify
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         static const pdftoedn::Symbol SYMBOL_ID;
         static const pdftoedn::Symbol SYMBOL_INSTANCE_COUNT;
         static const pdftoedn::Symbol SYMBOL_WIDTH;
@@ -224,12 +216,8 @@ namespace pdftoedn
 
         void set_clip_id(intmax_t clip_id) { clip_path_id = clip_id; }
 
-#ifdef EDSEL_RUBY_GEM
-        // rubify
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         static const pdftoedn::Symbol SYMBOL_TYPE_IMAGE;
 
     private:

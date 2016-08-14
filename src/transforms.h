@@ -10,13 +10,9 @@ namespace pdftoedn
     //
     struct Transform : public gemable
     {
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const = 0;
-        static Rice::Object list_to_ruby(const std::list<Transform*>& l);
-#else
         virtual std::ostream& to_edn(std::ostream& o) const = 0;
         static util::edn::Vector& list_to_edn(const std::list<Transform*>& l, util::edn::Vector& transform_a);
-#endif
+
         static const pdftoedn::Symbol SYMBOL;
     };
 
@@ -31,11 +27,8 @@ namespace pdftoedn
             angle(a), origin(x, y)
         { }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         static const pdftoedn::Symbol SYMBOL;
 
     private:
@@ -54,11 +47,8 @@ namespace pdftoedn
             delta(x, y)
         { }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         static const pdftoedn::Symbol SYMBOL;
 
     private:

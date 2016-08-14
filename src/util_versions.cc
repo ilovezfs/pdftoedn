@@ -2,9 +2,7 @@
 #include <string>
 #include <sstream>
 
-#ifdef EDSEL_RUBY_GEM
-#include <rice/Hash.hpp>
-#else
+#ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
@@ -83,28 +81,7 @@ namespace pdftoedn {
                 return v.str();
             }
 
-#ifdef EDSEL_RUBY_GEM
-            // ext version info - obtained from Ruby side
-            static std::string ext_version;
-            void set_ext_version(const std::string& version) { ext_version = version; }
-
-            //
-            // versions for returned meta
-            Rice::Object libs(const FontEngine& fe)
-            {
-                Rice::Hash version_h;
-                version_h[ SYMBOL_APP ]          = ext_version;
-                version_h[ SYMBOL_POPPLER ]      = poppler();
-                version_h[ SYMBOL_LIBPNG  ]      = libpng();
-                version_h[ SYMBOL_BOOST ]        = boost();
-                if (fe.is_ok()) {
-                    version_h[ SYMBOL_FREETYPE ] = freetype(fe);
-                }
-                version_h[ SYMBOL_LEPTONICA ]    = leptonica();
-                version_h[ SYMBOL_RAPIDJSON ]    = rapidjson();
-                return version_h;
-            }
-#else
+            // version EDN hash
             util::edn::Hash& libs(const pdftoedn::FontEngine& fe, util::edn::Hash& version_h)
             {
                 version_h.reserve(9);
@@ -119,7 +96,6 @@ namespace pdftoedn {
                 version_h.push( SYMBOL_RAPIDJSON   , rapidjson() );
                 return version_h;
             }
-#endif
         } // version
     } // util
 } // namespace

@@ -34,16 +34,7 @@ namespace pdftoedn
         bool pre_process_fonts();
         bool has_outline() const { return outline_output.has_content(); }
 
-        // returns document metadata
-#ifdef EDSEL_RUBY_GEM
-        Rice::Object meta();
-        // return page data
-        Rice::Object process_page(uintmax_t page_num);
-#else
-        std::ostream& meta(std::ostream& o);
-        std::ostream& process_page(uintmax_t page_num, std::ostream& o);
         friend std::ostream& operator<<(std::ostream& o, PDFReader& doc);
-#endif
 
     private:
         bool init_ok;
@@ -62,6 +53,10 @@ namespace pdftoedn
         uintmax_t get_link_page_num(LinkDest* link);
 
         void display_page(::OutputDev *dev, uintmax_t page);
+
+        // returns document metadata
+        std::ostream& meta(std::ostream& o);
+        std::ostream& process_page(uintmax_t page_num, std::ostream& o);
     };
 
 } // namespace

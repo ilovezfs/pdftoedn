@@ -3,7 +3,6 @@
 #include <vector>
 #include "base_types.h"
 
-#ifndef EDSEL_RUBY_GEM // Ndef
 namespace pdftoedn {
     namespace util {
         namespace edn {
@@ -222,4 +221,4 @@ namespace pdftoedn {
         }
     }
 }
-#endif
+

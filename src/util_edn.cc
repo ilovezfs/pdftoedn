@@ -10,7 +10,6 @@
 #include "base_types.h"
 #include "util_edn.h"
 
-#ifndef EDSEL_RUBY_GEM // Ndef
 namespace pdftoedn
 {
     namespace util
@@ -172,4 +171,4 @@ namespace pdftoedn
         }
     }
 } // namespace
-#endif
+

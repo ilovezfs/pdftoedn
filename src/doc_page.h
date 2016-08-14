@@ -100,15 +100,7 @@ namespace pdftoedn
 
         void finalize();
 
-#ifdef EDSEL_RUBY_GEM
-        // rubify
-        virtual Rice::Object to_ruby() const;
-
-        // static method to process page data passed from ruby
-        static Rice::Object recompute_bounds(Rice::Hash page);
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
 
         static const pdftoedn::Symbol SYMBOL_PAGE_TEXT_SPANS;
         static const pdftoedn::Symbol SYMBOL_PAGE_GFX_CMDS;
@@ -127,13 +119,9 @@ namespace pdftoedn
             }
 
             bool is_equivalent_to(const PdfFont& font) const;
-
-#ifdef EDSEL_RUBY_GEM
-            virtual Rice::Object to_ruby() const;
-#else
-            virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
             void check_fonts() const;
+
+            virtual std::ostream& to_edn(std::ostream& o) const;
 
         private:
             mutable std::set<const PdfFont*, PdfFont::lt> matching_doc_fonts;
@@ -192,11 +180,7 @@ namespace pdftoedn
         intmax_t get_color_index(color_comp_t r, color_comp_t g, color_comp_t b) const;
         intmax_t get_font_index(const PdfFont& font) const;
         intmax_t cur_font_index() const { return cur_text.attribs.font_idx; }
-#ifdef EDSEL_RUBY_GEM
-        Rice::Hash resource_output() const;
-#else
-        util::edn::Hash& resource_to_edn_hash(util::edn::Hash& resource_h) const;
-#endif
+
         bool inside_page(const BoundingBox& bbox) const { return bbox.is_inside( this->bbox ); }
         intmax_t inside_link(const BoundingBox& bbox) const;
         bool insert_pending_span();
@@ -209,6 +193,8 @@ namespace pdftoedn
 
         // mark end of text object - triggers pushing of any pending spans
         void mark_end_of_text();
+
+        util::edn::Hash& resource_to_edn_hash(util::edn::Hash& resource_h) const;
 
         // prohibit these cause we shouldn't be using them anyway
         PdfPage();

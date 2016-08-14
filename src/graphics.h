@@ -19,17 +19,12 @@ namespace pdftoedn
         PdfGfxCmd(const pdftoedn::Symbol& gfx_cmd) :
             cmd(gfx_cmd) { }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream&) const;
-#endif
+
     protected:
         const pdftoedn::Symbol& cmd;
 
-#ifndef EDSEL_RUBY_GEM
         virtual util::edn::Vector& to_edn_vector(util::edn::Vector&) const;
-#endif
     };
 
 
@@ -55,11 +50,8 @@ namespace pdftoedn
         bool get_cur_pt(Coord& c) const;
         bool equals(const PdfSubPathCmd& c) const { return (coords == c.coords); }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream&) const;
-#endif
+
     protected:
         std::list<Coord> coords;
     };
@@ -94,20 +86,14 @@ namespace pdftoedn
         bool get_cur_pt(Coord& c) const;
         BoundingBox bounding_box() const { return bounds.bounding_box(); }
 
-#ifdef EDSEL_RUBY_GEM
-        // rubify
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream&) const;
-#endif
+
     protected:
         Bounds bounds;
         eShape shape;
         std::list<PdfSubPathCmd *> cmds;
 
-#ifndef EDSEL_RUBY_GEM
         virtual util::edn::Hash& to_edn_hash(util::edn::Hash& h) const;
-#endif
     };
 
 
@@ -277,11 +263,7 @@ namespace pdftoedn
         void set_clip_id(intmax_t id) { clip_id = id; }
         void clip_bounds(const BoundingBox& clip_bbox) { bounds.clip(clip_bbox); }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
 
     protected:
         Type path_type;
@@ -293,11 +275,7 @@ namespace pdftoedn
         // path to clip to (when != -1)
         intmax_t clip_id;
 
-#ifdef EDSEL_RUBY_GEM
-        Rice::Object attribs_to_ruby() const;
-#else
         util::edn::Hash& attribs_to_edn_hash(util::edn::Hash& h) const;
-#endif
     };
 
 } // namespace

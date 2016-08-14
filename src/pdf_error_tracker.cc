@@ -2,11 +2,6 @@
 #include <string>
 #include <list>
 
-#ifdef EDSEL_RUBY_GEM
-#include <rice/Array.hpp>
-#include <rice/Hash.hpp>
-#endif
-
 #include <poppler/Error.h>
 
 #include "pdf_error_tracker.h"
@@ -56,22 +51,9 @@ namespace pdftoedn
     const Symbol ErrorTracker::error::SYMBOL_DESC        = "desc";
     const Symbol ErrorTracker::error::SYMBOL_COUNT       = "count";
 
-#ifdef EDSEL_RUBY_GEM
-    Rice::Object ErrorTracker::error::to_ruby() const
-    {
-        Rice::Hash error_h;
-        error_h[ ErrorTracker::error::SYMBOL_TYPE ]      = SYMBOL_ERROR_TYPES[ type ];
-        error_h[ ErrorTracker::error::SYMBOL_LEVEL ]     = SYMBOL_ERROR_LEVELS[ lvl ];
-        error_h[ ErrorTracker::error::SYMBOL_MODULE ]    = mod;
-        error_h[ ErrorTracker::error::SYMBOL_DESC ]      = msg;
-        if (count > 1) {
-            error_h[ ErrorTracker::error::SYMBOL_COUNT ] = count;
-        }
-        return error_h;
-    }
 
-#else
-
+    //
+    // output error as EDN
     std::ostream& ErrorTracker::error::to_edn(std::ostream& o) const
     {
         util::edn::Hash h(5);
@@ -85,7 +67,7 @@ namespace pdftoedn
         o << h;
         return o;
     }
-#endif
+
 
     //
     // has this error been marked to be ignored already?
@@ -151,20 +133,8 @@ namespace pdftoedn
         return false;
     }
 
-#ifdef EDSEL_RUBY_GEM
-    //
-    // return the error data
-    Rice::Object ErrorTracker::to_ruby() const
-    {
-        Rice::Array error_a;
-        std::for_each( errors.begin(), errors.end(),
-                       [&](const error* e) { error_a.push( e->to_ruby() ); }
-                       );
-        return error_a;
-    }
 
-#else
-
+    // outputs the list of errors
     std::ostream& ErrorTracker::to_edn(std::ostream& o) const
     {
         util::edn::Vector v(errors.size());
@@ -174,7 +144,7 @@ namespace pdftoedn
         o << v;
         return o;
     }
-#endif
+
 
     //
     // static function for registering with poppler's error handler

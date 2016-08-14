@@ -2,13 +2,8 @@
 #include <string>
 #include <iterator>
 
-#ifdef EDSEL_RUBY_GEM
-#include <ruby/ruby.h>
-#include <ruby/encoding.h>
-#else
 #ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif
 #endif
 
 #ifdef __clang__
@@ -86,22 +81,6 @@ namespace pdftoedn
         {
             return boost::locale::conv::utf_to_utf<char>(w_str);
         }
-
-#ifdef EDSEL_RUBY_GEM
-        Rice::String wstring_to_ruby(std::wstring const& w_str)
-        {
-            std::string s(wstring_to_utfstring(w_str));
-            VALUE vs = Rice::protect( rb_str_new2, s.c_str() );
-            VALUE s_utf8 = Rice::protect( rb_enc_associate, vs, rb_utf8_encoding() );
-            return Rice::String(s_utf8);
-        }
-        Rice::String string_to_ruby(std::string const& s)
-        {
-            VALUE vs = Rice::protect( rb_str_new2, s.c_str() );
-            VALUE s_utf8 = Rice::protect( rb_enc_associate, vs, rb_utf8_encoding() );
-            return Rice::String(s_utf8);
-        }
-#endif
 
         //
         // convert poppler's Unicode to wstring

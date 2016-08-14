@@ -5,11 +5,6 @@
 #include <list>
 #include <vector>
 
-#ifdef EDSEL_RUBY_GEM
-#include <rice/Array.hpp>
-#include <rice/Hash.hpp>
-#endif
-
 #include <poppler/GfxState.h>
 
 #include "color.h"
@@ -23,7 +18,6 @@
 #include "util_versions.h"
 #include "util_edn.h"
 
-#undef EDSEL_INCLUDE_DEBUG_INFO
 
 namespace pdftoedn
 {
@@ -706,120 +700,6 @@ namespace pdftoedn
         return -1;
     }
 
-#ifdef EDSEL_RUBY_GEM
-    //
-    // rubify the PDF page data
-    Rice::Object PdfPage::to_ruby() const
-    {
-        Rice::Hash page_h;
-        page_h[ util::version::SYMBOL_DATA_FORMAT_VERSION ] = util::version::data_format_version();
-        page_h[ SYMBOL_PAGE_NUMBER ]                        = number;
-        page_h[ SYMBOL_PAGE_OK ]                            = !et.errors_reported();
-
-        // text spans, graphics, links
-
-        // an array for the text spans - note: must call to_ruby()
-        // method explicitly so the correct one is invoked as we're
-        // iterating through polymorphic types
-        Rice::Array text_a;
-        std::for_each( text_spans.begin(), text_spans.end(),
-                       [&](const PdfBoxedItem* t) { text_a.push( t->to_ruby() ); }
-                       );
-
-        // an array for the graphics with clip paths first
-        Rice::Array gfx_a;
-        std::for_each( clip_paths.begin(), clip_paths.end(),
-                       [&](const PdfDocPath *p) { gfx_a.push( p->to_ruby() ); }
-                       );
-        std::for_each( graphics.begin(), graphics.end(),
-                       [&](const PdfGfxCmd *c) { gfx_a.push( c->to_ruby() ); }
-                       );
-
-        // an array for links
-        Rice::Array links_a;
-        std::for_each( links.begin(), links.end(),
-                       [&](const PdfAnnotLink* l) { links_a.push( l->to_ruby() ); }
-                       );
-
-        Rice::Object resources = resource_output();
-
-        // populate hash with the data to be returned
-        page_h[ SYMBOL_PAGE_WIDTH ]                   = width();
-        page_h[ SYMBOL_PAGE_HEIGHT ]                  = height();
-        page_h[ SYMBOL_PAGE_ROTATION ]                = rotation;
-        page_h[ SYMBOL_PAGE_HAS_INVISIBLES ]          = has_invisible_text;
-
-        // compute the page's bbox based on the text and gfx bounds as
-        // we add them to the output to prevent infinite bounds
-        // (TESLA-7137)
-        Bounds page_bounds;
-        if (!text_spans.empty()) {
-            page_h[ SYMBOL_PAGE_TEXT_BOUNDS ]         = cur_text.bounds.to_ruby();
-            page_bounds.expand(cur_text.bounds.bounding_box());
-        }
-        if (!graphics.empty()) {
-            page_h[ SYMBOL_PAGE_GFX_BOUNDS ]          = cur_gfx.bounds.to_ruby();
-            page_bounds.expand(cur_gfx.bounds.bounding_box());
-        }
-        page_h[ SYMBOL_PAGE_BOUNDS ]                  = page_bounds.to_ruby();
-
-        page_h[ SYMBOL_RESOURCES ]                    = resources;
-
-#ifdef EDSEL_INCLUDE_DEBUG_INFO
-        page_h[ pdftoedn::Symbol( "num_text_spans" ) ]    = text_spans.size();
-#endif
-        page_h[ SYMBOL_PAGE_TEXT_SPANS ]              = text_a;
-        page_h[ SYMBOL_PAGE_GFX_CMDS ]                = gfx_a;
-        page_h[ SYMBOL_PAGE_LINKS ]                   = links_a;
-
-        // warnings / errors encountered
-        if (et.errors_or_warnings_reported()) {
-            page_h[ ErrorTracker::SYMBOL_ERRORS ]     = et.to_ruby();
-        }
-
-        return page_h;
-    }
-
-
-    //
-    // builds the resource hash data
-    Rice::Hash PdfPage::resource_output() const
-    {
-        // color list
-        Rice::Array color_a;
-        std::for_each( colors.begin(), colors.end(),
-                       [&](const RGBColor* c) { color_a.push( c->to_ruby() ); }
-                       );
-
-        // create and add an array for the font list
-        Rice::Array font_a;
-        std::for_each( fonts.begin(), fonts.end(),
-                       [&](const PageFont* f) { font_a.push( f->to_ruby() ); }
-                       );
-
-        // image blobs
-        Rice::Hash image_h;
-        std::for_each( images.begin(), images.end(),
-                       [&](const ImageData* i) { image_h[ i->id() ] = i->to_ruby(); }
-                       );
-
-        // glyphs
-        Rice::Array glyph_a;
-        std::for_each( glyphs.begin(), glyphs.end(),
-                       [&](const PdfGlyph* g) { glyph_a.push( g->to_ruby() ); }
-                       );
-
-        // collected resources
-        Rice::Hash resource_h;
-        resource_h[ SYMBOL_RES_COLOR_LIST ]           = color_a;
-        resource_h[ SYMBOL_RES_FONT_LIST ]            = font_a;
-        resource_h[ SYMBOL_RES_IMAGE_BLOBS ]          = image_h;
-        resource_h[ SYMBOL_RES_GLYPHS ]               = glyph_a;
-        return resource_h;
-    }
-
-#else
-
     //
     // builds the resource hash data
     util::edn::Hash& PdfPage::resource_to_edn_hash(util::edn::Hash& resource_h) const
@@ -859,6 +739,8 @@ namespace pdftoedn
     }
 
 
+    //
+    // output the page in EDN
     std::ostream& PdfPage::to_edn(std::ostream& o) const
     {
         util::edn::Hash page_h(15);
@@ -928,7 +810,7 @@ namespace pdftoedn
         o << page_h;
         return o;
     }
-#endif
+
 
     // ==================================================================
     // private struct to track transient collection state
@@ -965,7 +847,7 @@ namespace pdftoedn
 
 
     // ==================================================================
-    // optimal output of a page's font
+    // page font
     //
 
     //
@@ -986,49 +868,9 @@ namespace pdftoedn
         return false;
     }
 
-#ifdef EDSEL_RUBY_GEM
+
     //
-    //
-    Rice::Object PdfPage::PageFont::to_ruby() const
-    {
-        Rice::Hash font_h;
-
-        // get the family & style from the first entry
-        std::set<const PdfFont*>::const_iterator fi = matching_doc_fonts.begin();
-
-        font_h[ PdfFont::SYMBOL_FAMILY ]             = (*fi)->family();
-
-        // font style attributes, if present
-        if ((*fi)->is_bold()) {
-            font_h[ PdfFont::SYMBOL_STYLE_BOLD ]     = true;
-        }
-
-        if ((*fi)->is_italic()) {
-            font_h[ PdfFont::SYMBOL_STYLE_ITALIC ]   = true;
-        }
-
-        if (pdftoedn::options.include_debug_info())
-        {
-            // list equivalent fonts
-            Rice::Array refs_a;
-
-            while (fi != matching_doc_fonts.end()) {
-                const PdfFont* f = *fi;
-
-                // add the name to the array
-                refs_a.push( f->name() );
-
-                // clear unmapped list so we only record the ones for
-                // this page
-                f->clear_unmapped_codes();
-
-                ++fi;
-            }
-            font_h[ SYMBOL_EQUIVALENT_FONTS ] = refs_a;
-        }
-        return font_h;
-    }
-#else
+    // page font output
     std::ostream& PdfPage::PageFont::to_edn(std::ostream& o) const
     {
         util::edn::Hash font_h(4);
@@ -1069,7 +911,6 @@ namespace pdftoedn
         o << font_h;
         return o;
     }
-#endif
 
     //
     // debug info about font map errors

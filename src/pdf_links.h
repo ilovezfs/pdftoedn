@@ -21,12 +21,8 @@ namespace pdftoedn
         void set_top_left(double t, double l);
         void set_bottom_right(double b, double r);
 
-#ifdef EDSEL_RUBY_GEM
-        // rubify
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         enum position_e {
             LINK_POS_UNDEF,
             TOP_LEFT,
@@ -45,9 +41,7 @@ namespace pdftoedn
         position_e orientation;
 
     protected:
-#ifndef EDSEL_RUBY_GEM
         virtual util::edn::Hash& to_edn_hash(util::edn::Hash& h) const;
-#endif
     };
 
 
@@ -80,12 +74,8 @@ namespace pdftoedn
                     center.y <= bbox.y2());
         }
 
-#ifdef EDSEL_RUBY_GEM
-        // rubify
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         static const pdftoedn::Symbol SYMBOL_TYPE;
         static const pdftoedn::Symbol SYMBOL_EFFECT;
         static const pdftoedn::Symbol SYMBOL_EFFECTS[];
@@ -102,9 +92,7 @@ namespace pdftoedn
             effect(link_effect)
         { }
 
-#ifndef EDSEL_RUBY_GEM
         virtual util::edn::Hash& to_edn_hash(util::edn::Hash& h) const;
-#endif
 
     private:
         type_e type;
@@ -128,12 +116,8 @@ namespace pdftoedn
             dest(link_dest)
         { }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
         virtual util::edn::Hash& to_edn_hash(util::edn::Hash& h) const;
-#endif
 
     private:
         std::string dest;
@@ -151,11 +135,8 @@ namespace pdftoedn
             page(link_page)
         { }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         static const pdftoedn::Symbol SYMBOL_PAGE;
 
     protected:

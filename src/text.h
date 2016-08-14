@@ -113,12 +113,8 @@ namespace pdftoedn
         intmax_t glyph_idx;
 
         friend class PdfText;
-#ifdef EDSEL_RUBY_GEM
-        // prohibit public calls
-        virtual Rice::Object to_ruby() const { return Qnil; }
-#else
+
         virtual std::ostream& to_edn(std::ostream& o) const { return o; }
-#endif
     };
 
 
@@ -161,12 +157,8 @@ namespace pdftoedn
 
         const OverlapPred& overlap_predicate() const;
 
-#ifdef EDSEL_RUBY_GEM
-        // rubify
-        virtual Rice::Object to_ruby() const;
-#else
         std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         static const pdftoedn::Symbol SYMBOL_TYPE_SPAN;
         static const pdftoedn::Symbol SYMBOL_ORIGIN;
         static const pdftoedn::Symbol SYMBOL_GLYPH_IDX;

@@ -1,12 +1,6 @@
 #include <ostream>
 #include <list>
 
-#ifdef EDSEL_RUBY_GEM
-#include <rice/Object.hpp>
-#include <rice/Array.hpp>
-#include <rice/Hash.hpp>
-#endif
-
 #include "graphics.h"
 #include "util.h"
 #include "util_edn.h"
@@ -101,20 +95,11 @@ namespace pdftoedn
     // -------------------------------------------------------
     // base gfx command class
     //
-#ifdef EDSEL_RUBY_GEM
-    Rice::Object PdfGfxCmd::to_ruby() const
-    {
-        Rice::Array cmd_a;
-        cmd_a.push( cmd );
-        return cmd_a;
-    }
-#else
     util::edn::Vector& PdfGfxCmd::to_edn_vector(util::edn::Vector& cmd_a) const
     {
         cmd_a.push( cmd );
         return cmd_a;
     }
-
 
     std::ostream& PdfGfxCmd::to_edn(std::ostream& o) const
     {
@@ -122,7 +107,6 @@ namespace pdftoedn
         o << to_edn_vector(cmd_h);
         return o;
     }
-#endif
 
     // -------------------------------------------------------
     // coordinate-op commands
@@ -141,7 +125,6 @@ namespace pdftoedn
         coords.push_back(c3);
     }
 
-
     //
     // returns the last coordinate added
     bool PdfSubPathCmd::get_cur_pt(Coord& c) const
@@ -154,32 +137,8 @@ namespace pdftoedn
         return true;
     }
 
-#ifdef EDSEL_RUBY_GEM
     //
-    // rubify a coordinate-base graphic command
-    Rice::Object PdfSubPathCmd::to_ruby() const
-    {
-        // store the command
-        Rice::Array path_a;
-        path_a.push( cmd );
-
-        if (coords.size() == 1) {
-            // if there's only a single coordinate, store it on its
-            // own
-            path_a.push( coords.back().to_ruby() );
-        }
-        else if (coords.size() > 1) {
-            // store the coords in their own array
-            Rice::Array coords_a;
-            std::for_each( coords.begin(), coords.end(),
-                           [&](const Coord& c) { coords_a.push(c.to_ruby()); }
-                           );
-            path_a.push( coords_a );
-        }
-
-        return path_a;
-    }
-#else
+    // command EDN output
     std::ostream& PdfSubPathCmd::to_edn(std::ostream& o) const
     {
         util::edn::Vector cmds_v(2);
@@ -202,12 +161,11 @@ namespace pdftoedn
         o << cmds_v;
         return o;
     }
-#endif
+
 
     // -------------------------------------------------------
     // gfx attributes helper class
     //
-
     bool GfxAttribs::equals(const GfxAttribs& a2) const
     {
         return (
@@ -358,31 +316,9 @@ namespace pdftoedn
         }
     }
 
-#ifdef EDSEL_RUBY_GEM
+
     //
-    // rubify a path
-    Rice::Object PdfPath::to_ruby() const
-    {
-        Rice::Array path_a;
-        // traverse the commands inserting them into an array
-        std::for_each( cmds.begin(), cmds.end(),
-                       [&](const PdfSubPathCmd *c) { path_a.push(c->to_ruby()); }
-                       );
-
-        // ready to produce the output - a hash contains the commands
-        // and attributes
-        Rice::Hash path_h;
-        path_h[ PdfGfxCmd::SYMBOL_TYPE ] = SYMBOL_TYPE_PATH;
-        path_h[ SYMBOL_COMMAND_LIST ]    = path_a;
-
-        // rubify the bounds
-        path_h[ BoundingBox::SYMBOL ]    = bounds.to_ruby();
-
-        return path_h;
-    }
-
-#else
-
+    // path EDN output
     util::edn::Hash& PdfPath::to_edn_hash(util::edn::Hash& path_h) const
     {
         path_h.reserve(3);
@@ -410,7 +346,7 @@ namespace pdftoedn
         o << to_edn_hash(path_h);
         return o;
     }
-#endif
+
 
     // -------------------------------------------------------
     // Document Paths
@@ -469,112 +405,6 @@ namespace pdftoedn
         return true;
     }
 
-#ifdef EDSEL_RUBY_GEM
-    //
-    // rubify
-    Rice::Object PdfDocPath::to_ruby() const
-    {
-        // ready to produce the output - a hash contains the subpaths
-        // and attributes
-        Rice::Hash path_h = PdfPath::to_ruby();
-
-        path_h[ SYMBOL_PATH_TYPE ]    = SYMBOL_PATH_TYPES[path_type];
-
-        // meaning of clip_id depends on the path type:
-        if (path_type == PdfDocPath::CLIP) {
-            // for CLIP paths, it is the id for SVG output
-            path_h[ SYMBOL_ID ]       = clip_id;
-        } else if (clip_id != -1) {
-            // for FILL or STROKE, it is the clip path id to clip to
-            // but only if != -1 ('-1' refers to the original clip -
-            // aka the whole page)
-            path_h[ SYMBOL_CLIP_TO ]  = clip_id;
-        }
-
-        // even-odd if set
-        if (even_odd) {
-            path_h[ SYMBOL_EVEN_ODD ] = true;
-        }
-
-        path_h[ SYMBOL_ATTRIBS ]      = attribs_to_ruby();
-        return path_h;
-    }
-
-
-    Rice::Object PdfDocPath::attribs_to_ruby() const
-    {
-        // store attributes in a hash
-        Rice::Hash attribs_h;
-
-        if (path_type != CLIP)
-        {
-            if (path_type == STROKE)
-            {
-                // stroke attributes
-                if (attribs.stroke.color_idx != -1) {
-                    attribs_h[ GfxAttribs::SYMBOL_STROKE_COLOR_IDX ] = attribs.stroke.color_idx;
-
-                    if (attribs.stroke.opacity < 1.0) {
-                        attribs_h[ GfxAttribs::SYMBOL_STROKE_OPACITY ]   = attribs.stroke.opacity;
-                    }
-
-                    // line width & miter limit
-                    attribs_h[ GfxAttribs::SYMBOL_LINE_WIDTH ]       = attribs.line_width;
-                    attribs_h[ GfxAttribs::SYMBOL_MITER_LIMIT ]      = attribs.miter_limit;
-
-                    // translate the line cap:
-                    // 0 -> butt, 1 -> round, 2 -> square
-                    if (attribs.line_cap != -1 && attribs.line_cap < GfxAttribs::LINE_CAP_STYLE_COUNT) {
-                        attribs_h[ GfxAttribs::SYMBOL_LINE_CAP ]     = GfxAttribs::SYMBOL_LINE_CAP_STYLE[attribs.line_cap];
-                    }
-
-                    // translate the line join:
-                    // 0 -> miter, 1 -> round, 2 -> bevel
-                    if (attribs.line_join != -1 && attribs.line_join < GfxAttribs::LINE_JOIN_STYLE_COUNT) {
-                        attribs_h[ GfxAttribs::SYMBOL_LINE_JOIN ]    = GfxAttribs::SYMBOL_LINE_JOIN_STYLE[attribs.line_join];
-                    }
-
-                    // line dash
-                    if (!attribs.line_dash.empty()) {
-                        Rice::Array dash_a;
-                        std::for_each( attribs.line_dash.begin(), attribs.line_dash.end(),
-                                       [&](const double& d) { dash_a.push(d); }
-                                       );
-                        attribs_h[ GfxAttribs::SYMBOL_DASH_VECTOR ]  = dash_a;
-                    }
-
-                    // overprint
-                    if (attribs.stroke.overprint && attribs.overprint_mode < GfxAttribs::OVERPRINT_MODE_COUNT) {
-                        attribs_h[ GfxAttribs::SYMBOL_STROKE_OVERPRINT ] = GfxAttribs::SYMBOL_OVERPRINT_MODE_TYPES[ attribs.overprint_mode ];
-                    }
-                }
-            }
-            else {
-                // FILL attributes
-                if (attribs.fill.color_idx != -1) {
-                    attribs_h[ GfxAttribs::SYMBOL_FILL_COLOR_IDX ]     = attribs.fill.color_idx;
-
-                    if (attribs.fill.opacity < 1.0) {
-                        attribs_h[ GfxAttribs::SYMBOL_FILL_OPACITY ]   = attribs.fill.opacity;
-                    }
-
-                    // overprint
-                    if (attribs.fill.overprint && attribs.overprint_mode < GfxAttribs::OVERPRINT_MODE_COUNT) {
-                        attribs_h[ GfxAttribs::SYMBOL_FILL_OVERPRINT ] = GfxAttribs::SYMBOL_OVERPRINT_MODE_TYPES[ attribs.overprint_mode ];
-                    }
-                }
-            }
-
-            // blend mode
-            if (attribs.blend_mode != GfxAttribs::NORMAL_BLEND &&
-                attribs.blend_mode < GfxAttribs::BLEND_MODE_COUNT) {
-                attribs_h[ GfxAttribs::SYMBOL_BLEND_MODE ] = GfxAttribs::SYMBOL_BLEND_MODE_TYPES[attribs.blend_mode];
-            }
-        }
-        return attribs_h;
-    }
-
-#else
 
     //
     // doc path output
@@ -680,6 +510,4 @@ namespace pdftoedn
         }
         return attribs_h;
     }
-#endif
-
 } // namespace

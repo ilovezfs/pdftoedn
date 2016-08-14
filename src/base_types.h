@@ -4,12 +4,6 @@
 #include <ostream>
 #include <cmath>
 
-#ifdef EDSEL_RUBY_GEM
-#include <rice/Array.hpp>
-#include <rice/Hash.hpp>
-#include <rice/String.hpp>
-#endif
-
 namespace pdftoedn
 {
     // forward declarations of common types needed for output
@@ -29,21 +23,17 @@ namespace pdftoedn
     //
     struct gemable {
         virtual ~gemable() { }
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const { return Qnil; }
-#else
-        virtual std::ostream& to_edn(std::ostream& o) const = 0;
 
+        virtual std::ostream& to_edn(std::ostream& o) const = 0;
         friend std::ostream& operator<<(std::ostream& o, const gemable& g) {
             g.to_edn(o);
             return o;
         }
-#endif
     };
 
 
     // -------------------------------------------------------
-    // ruby/edn symbols
+    // edn symbols with a leading ':'
     //
     struct Symbol : public gemable
     {
@@ -51,16 +41,11 @@ namespace pdftoedn
         Symbol(const char* s) : str(s) {}
         explicit Symbol(const std::string& s) : str(s) {}
 
-#ifdef EDSEL_RUBY_GEM
-        // remove
-        bool operator==(const Rice::Symbol& s) const { return (Rice::Symbol(str) == s); }
-        virtual Rice::Object to_ruby() const { return Rice::Symbol(str); }
-#else
         virtual std::ostream& to_edn(std::ostream& o) const {
             o << ":" << str;
             return o;
         }
-#endif
+
     private:
         std::string str;
     };
@@ -80,11 +65,7 @@ namespace pdftoedn
 
         bool operator==(const Coord& c) const { return (x == c.x && y == c.y); }
 
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
     };
 
 
@@ -233,12 +214,8 @@ namespace pdftoedn
             return (intersection_area(bbox) / area());
         }
 
-        // rubify
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
         static const Symbol SYMBOL;
 
     private:
@@ -279,12 +256,8 @@ namespace pdftoedn
             return BoundingBox(x_min, y_min, x_max - x_min, y_max - y_min);
         }
 
-        // returns a rubified bounding box
-#ifdef EDSEL_RUBY_GEM
-        virtual Rice::Object to_ruby() const;
-#else
         virtual std::ostream& to_edn(std::ostream& o) const;
-#endif
+
     private:
         double x_min, y_min, x_max, y_max;
 
@@ -338,13 +311,3 @@ namespace pdftoedn
     };
 
 } // namespace
-
-#ifdef EDSEL_RUBY_GEM
-//
-// implicit conversion template functions for rice
-template<>
-inline
-Rice::Object to_ruby<pdftoedn::Symbol>(pdftoedn::Symbol const &s) {
-    return s.to_ruby();
-}
-#endif
