@@ -1,6 +1,6 @@
 #!/bin/sh
 
-[[ "x${TESTS_DIR}" == "x" ]] && TESTS_DIR="."
+[ "x${TESTS_DIR}" = "x" ] && TESTS_DIR="."
 . ${TESTS_DIR}/test_common.sh
 
 test_start
@@ -16,19 +16,17 @@ do
     ARGS="-f"
 
     # uncompress the reference output if needed
-    if [[ ! -f "$REFEDN" ]]; then
+    if [ ! -f "$REFEDN" ]; then
         $BUNZIP2 "$file"
     fi
 
     # if there's a fontmap available for the doc, use it
-    if [[ -f "$FONTMAP" ]]; then
+    if [ -f "$FONTMAP" ]; then
         ARGS="$ARGS -m "$FONTMAP""
     fi
 
     # process the PDF
-    cmd="$PDFTOEDN $ARGS -o "$TMPFILE" "$SRCPDF""
-    echo $cmd
-    `$cmd`
+    run_cmd "$PDFTOEDN $ARGS -o "$TMPFILE" "$SRCPDF""
     status=$?
 
     if [ $status -ne 0 ]; then
@@ -38,15 +36,16 @@ do
 
     # remove the filename string and version strings hash so it
     # doesn't cause diff output on version bumps
-    cat $TMPFILE | sed 's/:versions {[a-z0-9\:\"\.\, \-]*}/:versions {}/' | sed 's/:filename "[a-zA-z0-9\.\-/]*"/:filename ""/' > t1.tmp
-    cat $REFEDN  | sed 's/:versions {[a-z0-9\:\"\.\, \-]*}/:versions {}/' | sed 's/:filename "[a-zA-z0-9\.\-/]*"/:filename ""/' > t2.tmp
+    filter_meta $TMPFILE t1.tmp
+    filter_meta $REFEDN t2.tmp
 
+    # diff them
     $DIFF t1.tmp t2.tmp &> /dev/null
     status=$?
 
     $RM t1.tmp t2.tmp
     if [ $status -ne 0 ]; then
-        echo "\tFile output did not match reference output"
+        echo " -> File output did not match reference output"
     fi
 done
 

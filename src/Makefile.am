@@ -1,9 +1,11 @@
 # what flags you want to pass to the C compiler & linker
 AM_CXXFLAGS = \
     $(BOOST_CXXFLAGS) \
+    $(POPPLER_PARENT_INCLUDE) \
     $(poppler_CFLAGS) \
     $(freetype2_CFLAGS) \
     $(png_CFLAGS) \
+    $(lept_CFLAGS) \
     $(OPENSSL_INCLUDES)
 
 AM_LDFLAGS = \
@@ -15,6 +17,7 @@ pdftoedn_LDADD =  \
     $(poppler_LIBS) $(poppler_cpp_LIBS) \
     $(freetype2_LIBS) \
     $(png_LIBS) \
+    $(lept_LIBS) \
     $(OPENSSL_LIBS)
 
 

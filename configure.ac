@@ -28,6 +28,13 @@ AC_LANG_PUSH(C++)
 PKG_CHECK_MODULES([poppler], [poppler >= 0.45.0])
 PKG_CHECK_MODULES([poppler_cpp], [poppler-cpp >= 0.45.0])
 
+# poppler doesn't scope usage of its x-pdf headers but I prefer to.
+# This is usually not a problem unless poppler is installed in a
+# custom location because pkg-config usually returns the path
+# including the poppler subdirectory (e.g., /usr/some/path/include/poppler)
+POPPLER_PARENT_INCLUDE=-I`pkg-config --variable=includedir poppler | sed 's/\/include\/poppler.*/\/include/'`
+AC_SUBST([POPPLER_PARENT_INCLUDE])
+
 dnl make sure poppler xpdf headers are installed
 save_CPPFLAGS=$CPPFLAGS
 CPPFLAGS="$CPPFLAGS $poppler_CFLAGS"
@@ -60,20 +67,14 @@ AX_BOOST_REGEX
 AX_BOOST_LOCALE
 
 dnl rapidjson
-save_CPPFLAGS=$CPPFLAGS
-CPPFLAGS="$CPPFLAGS $rapidjson_CFLAGS"
-AC_CHECK_HEADER([rapidjson/document.h],,[AC_MSG_ERROR([rapidjson not found])])
-CPPFLAGS=$save_CPPFLAGS
-
+PKG_CHECK_MODULES([RapidJSON], RapidJSON,
+                  [], [rapidjson was not found])
 AC_LANG_POP
 
 AC_LANG_PUSH(C)
 dnl leptonica
-save_CPPFLAGS=$CPPFLAGS
-CPPFLAGS="$CPPFLAGS $leptonica_CFLAGS"
-AC_CHECK_HEADER([leptonica/allheaders.h],,[AC_MSG_ERROR([leptonica headers not found])])
-AC_SEARCH_LIBS([getLeptonicaVersion], [lept],, [AC_MSG_ERROR([leptonica library not found])])
-CPPFLAGS=$save_CPPFLAGS
+PKG_CHECK_MODULES([lept], lept,
+                  [], [leptonica was not found])
 
 dnl openssl
 AX_CHECK_OPENSSL(openssl_found=yes, openssl_found=no)
@@ -93,7 +94,6 @@ else
 
 fi
 AM_CONDITIONAL([LOCAL_MD5], [test x$openssl_found = xno])
-
 
 AC_LANG_POP
 

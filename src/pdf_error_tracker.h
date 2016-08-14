@@ -2,7 +2,7 @@
 
 #include <string>
 #include <list>
-#include <exception>
+#include <stdexcept>
 
 #ifdef __clang__
 #pragma clang diagnostic push

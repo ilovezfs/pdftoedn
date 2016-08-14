@@ -1,15 +1,13 @@
 #!/bin/sh
 
-[[ "x${TESTS_DIR}" == "x" ]] && TESTS_DIR="."
+[ "x${TESTS_DIR}" = "x" ] && TESTS_DIR="."
 . ${TESTS_DIR}/test_common.sh
 
 test_start
 
-
 # try to pass a negative page argument
-$PDFTOEDN -p -1 -o $TMPFILE $TESTDOC
+run_cmd "$PDFTOEDN -p -1 -o "$TMPFILE" "$TESTDOC""
 status=$?
-
 
 test_end
 
