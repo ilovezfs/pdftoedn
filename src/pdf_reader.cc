@@ -6,6 +6,7 @@
 #include <poppler/ErrorCodes.h>
 
 #include "util.h"
+#include "util_debug.h"
 #include "util_edn.h"
 #include "pdf_reader.h"
 #include "pdf_output_dev.h"
@@ -36,50 +37,61 @@ namespace pdftoedn
     const double PDFReader::DPI_72 = 72.0;
 
     //
-    // opens the document and preps things for processing
+    // opens the document and preps things for processing. throws if
+    // font engine fails to init freetype (from FE constructor) or if
+    // poppler fails to open the file
     PDFReader::PDFReader() :
         PDFDoc(new GooString(pdftoedn::options.filename().c_str()), NULL, NULL),
-        init_ok(false),
         font_engine(getXRef()),
         eng_odev(NULL),
         use_page_media_box(true)
     {
-        if (isOk()) {
+        if (!isOk()) {
+            std::stringstream ss;
+            ss << util::debug::get_poppler_doc_error_str(getErrorCode());
+            throw invalid_file(ss.str());
+        }
 
-            // TESLA-6245: Mike P requested a way to extract only links
-            // from a doc. To do this, we use a different type of
-            // OutputDev that ignores everything but links
-            if (pdftoedn::options.link_output_only()) {
-                eng_odev = new pdftoedn::LinkOutputDev(getCatalog());
-                init_ok = true;
+        // document is open and basic meta has been read. Before
+        // trying to do anything else, if a page number was given,
+        // check it is within range
+        if (pdftoedn::options.page_number() >= 0 &&
+            pdftoedn::options.page_number() >= getNumPages()) {
+            std::stringstream ss;
+            ss << "Error: requested page number " << pdftoedn::options.page_number()
+               << " is not valid (document has "
+               << getNumPages() << " page";
+            if (getNumPages() > 1) {
+                ss << "s";
             }
-            else {
+            ss << " and value must be 0-indexed)";
+            throw init_error(ss.str());
+        }
 
-                // pre-process the doc to extract fonts first. Needed
-                // if additional font data needs to be included in the
-                // meta before pages are parsed
-                if (pdftoedn::options.force_pre_process_fonts()) {
-                    pre_process_fonts();
-                }
+        // TESLA-6245: Mike P requested a way to extract only links
+        // from a doc. To do this, we use a different type of
+        // OutputDev that ignores everything but links
+        if (pdftoedn::options.link_output_only()) {
+            eng_odev = new pdftoedn::LinkOutputDev(getCatalog());
+        }
+        else {
+            // pre-process the doc to extract fonts first. Needed
+            // if additional font data needs to be included in the
+            // meta before pages are parsed
+            if (pdftoedn::options.force_pre_process_fonts()) {
+                pre_process_fonts();
+            }
 
-                eng_odev = new pdftoedn::OutputDev(getCatalog(), font_engine);
+            eng_odev = new pdftoedn::OutputDev(getCatalog(), font_engine);
 
-                // initialize font engine (set up freetype, etc.)
-                init_ok = font_engine.init();
+            // use page crop box if requested (page media box is the default)
+            if (pdftoedn::options.use_page_crop_box()) {
+                use_page_media_box = false;
+            }
 
-                if (init_ok) {
-                    // use page crop box if requested (page media box is the default)
-                    if (pdftoedn::options.use_page_crop_box()) {
-                        use_page_media_box = false;
-                    }
-
-                    // process outline, if needed
-                    if (!(pdftoedn::options.omit_outline())) {
-                        process_outline(outline_output);
-                    }
-                } else {
-                    et.log_critical( ErrorTracker::ERROR_FE_INIT_FAILURE, MODULE, "Font Engine failed to initialize" );
-                }
+            // process outline, if needed
+            if (!(pdftoedn::options.omit_outline())) {
+                process_outline(outline_output);
             }
         }
     }
@@ -111,7 +123,7 @@ namespace pdftoedn
         for (uintmax_t page = first; page <= last; page++)
         {
             // process the PDF info on this page
-            display_page(&fe_dev, page);
+            processPage(&fe_dev, page);
         }
 
 #if 0
@@ -123,63 +135,55 @@ namespace pdftoedn
 
     //
     // document meta output in EDN format
-    std::ostream& PDFReader::meta(std::ostream& o) {
+    std::ostream& PDFReader::output_meta(std::ostream& o) {
         util::edn::Hash meta_h(14);
 
         meta_h.push( util::version::SYMBOL_DATA_FORMAT_VERSION, util::version::data_format_version() );
         meta_h.push( SYMBOL_PDF_FILENAME                      , pdftoedn::options.filename() );
-        meta_h.push( SYMBOL_PDF_DOC_OK                        , isOk() );
-        meta_h.push( SYMBOL_FONT_ENG_OK                       , font_engine.is_ok() );
+        meta_h.push( SYMBOL_PDF_DOC_OK                        , true );
+        meta_h.push( SYMBOL_FONT_ENG_OK                       , true );
 
         if (font_engine.found_font_warnings()) {
             meta_h.push( SYMBOL_FONT_ENG_FONT_WARN            , true );
         }
 
-        if (isOk()) {
+        meta_h.push( SYMBOL_PDF_MAJ_VER                   , (uint8_t) getPDFMajorVersion() );
+        meta_h.push( SYMBOL_PDF_MIN_VER                   , (uint8_t) getPDFMinorVersion() );
 
-            meta_h.push( SYMBOL_PDF_MAJ_VER                   , (uint8_t) getPDFMajorVersion() );
-            meta_h.push( SYMBOL_PDF_MIN_VER                   , (uint8_t) getPDFMinorVersion() );
+        meta_h.push( SYMBOL_PDF_NUM_PAGES                 , (uintmax_t) getNumPages() );
 
-            meta_h.push( SYMBOL_PDF_NUM_PAGES                 , (uintmax_t) getNumPages() );
+        // outline - empty hash if none
+        meta_h.push( SYMBOL_PDF_OUTLINE                   , &outline_output );
 
-            // outline - empty hash if none
-            meta_h.push( SYMBOL_PDF_OUTLINE                   , &outline_output );
-
-            // save the sorted list of font sizes read in the
-            // document - to be used in case we need to generate
-            // an outline by examining page content
-            const std::set<double>& font_size_list = font_engine.get_font_size_list();
-            if (!font_size_list.empty()) {
-                util::edn::Vector font_size_a(font_size_list.size());
-                std::for_each( font_size_list.rbegin(), font_size_list.rend(),
-                               [&](const double& d) { font_size_a.push(d); }
-                               );
-                meta_h.push( SYMBOL_PDF_DOC_FONT_SIZES       , font_size_a );
-            }
-
-            // include document fonts in meta if requested
-            if (pdftoedn::options.include_debug_info())
-            {
-                // document font list
-                const FontList& fonts = font_engine.get_font_list();
-                util::edn::Vector font_a(fonts.size());
-
-                uintmax_t idx = 0;
-                std::for_each( fonts.begin(), fonts.end(),
-                               [&](const std::pair<const pdftoedn::PdfRef, pdftoedn::PdfFont *>& p) {
-                                   util::edn::Hash font_h(2);
-                                   p.second->to_edn_hash(font_h);
-
-                                   font_h.push( PdfPage::SYMBOL_FONT_IDX, idx++ );
-                                   font_a.push(font_h);
-                               } );
-                meta_h.push( SYMBOL_PDF_DOC_FONTS, font_a );
-            }
+        // save the sorted list of font sizes read in the
+        // document - to be used in case we need to generate
+        // an outline by examining page content
+        const std::set<double>& font_size_list = font_engine.get_font_size_list();
+        if (!font_size_list.empty()) {
+            util::edn::Vector font_size_a(font_size_list.size());
+            std::for_each( font_size_list.rbegin(), font_size_list.rend(),
+                           [&](const double& d) { font_size_a.push(d); }
+                           );
+            meta_h.push( SYMBOL_PDF_DOC_FONT_SIZES        , font_size_a );
         }
-        else if (getErrorCode() == errEncrypted) {
-            // if we're not able to process the doc because it was
-            // encrypted, we'll indicate so here.
-            meta_h.push( SYMBOL_PDF_ENCRYPTED                 , true );
+
+        // include document fonts in meta if requested
+        if (pdftoedn::options.include_debug_info())
+        {
+            // document font list
+            const FontList& fonts = font_engine.get_font_list();
+            util::edn::Vector font_a(fonts.size());
+
+            uintmax_t idx = 0;
+            std::for_each( fonts.begin(), fonts.end(),
+                           [&](const std::pair<const pdftoedn::PdfRef, pdftoedn::PdfFont *>& p) {
+                               util::edn::Hash font_h(2);
+                               p.second->to_edn_hash(font_h);
+
+                               font_h.push( PdfPage::SYMBOL_FONT_IDX, idx++ );
+                               font_a.push(font_h);
+                           } );
+            meta_h.push( SYMBOL_PDF_DOC_FONTS, font_a );
         }
 
         util::edn::Hash version_h;
@@ -195,8 +199,9 @@ namespace pdftoedn
 
 
     //
-    // calls poppler's display page with the necessary parameters
-    void PDFReader::display_page(::OutputDev *dev, uintmax_t page_num) {
+    // calls poppler's display page with the given output device and
+    // page number
+    void PDFReader::processPage(::OutputDev *dev, uintmax_t page_num) {
         // clear the current list of errors to only capture what is
         // generated by the page
         et.flush_errors();
@@ -207,7 +212,7 @@ namespace pdftoedn
 
     //
     // extract the document page data
-    std::ostream& PDFReader::process_page(uintmax_t page_num, std::ostream& o)
+    std::ostream& PDFReader::output_page(uintmax_t page_num, std::ostream& o)
     {
         uintmax_t num_pages = getNumPages();
 
@@ -217,7 +222,7 @@ namespace pdftoedn
         if (page_num <= num_pages) {
 
             // process the PDF info on this page
-            display_page(eng_odev, page_num);
+            processPage(eng_odev, page_num);
 
             const PdfPage* page_output = eng_odev->page_output();
 
@@ -229,7 +234,7 @@ namespace pdftoedn
         return o;
     }
 
-    std::ostream& operator<<(std::ostream& o, PDFReader& doc)
+    std::ostream& PDFReader::process(std::ostream& o)
     {
         // return a hash with the data in the format
         // { :meta { <meta> }, :pages [ {<page1>} {<page2>} ... {<pageN>} ] }
@@ -238,21 +243,21 @@ namespace pdftoedn
 
         // but dont store it in a hash so we write a page at a time
         o << "{" << Meta << " ";
-        doc.meta(o);
+        output_meta(o);
         o << ", " << Pages << " [";
 
         uintmax_t start_page, end_page;
 
         if (options.page_number() < 0) {
             start_page = 0;
-            end_page = doc.getNumPages();
+            end_page = getNumPages();
         } else {
             start_page = options.page_number();
             end_page = start_page + 1;
         }
 
         for (uintmax_t ii = start_page; ii < end_page; ++ii) {
-            doc.process_page(ii, o);
+            output_page(ii, o);
         }
 
         o << "]}";

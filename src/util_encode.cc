@@ -19,6 +19,21 @@ namespace pdftoedn
             // -------------------------------------------------------------------------------
             // image encoding using libpng
             //
+
+            //
+            // catch PNG errors instead of them getting set to stdout/stderr
+            static void user_error_fn(png_structp png_ptr, png_const_charp error_msg)
+            {
+                et.log_error( ErrorTracker::ERROR_PNG_ERROR, MODULE, error_msg);
+                throw pnglib_error(error_msg);
+            }
+
+            static void user_warning_fn(png_structp png_ptr, png_const_charp warning_msg)
+            {
+                et.log_warn( ErrorTracker::ERROR_PNG_WARNING, MODULE, warning_msg);
+            }
+
+            //
             // write / flush methods to write to an ostream
             static void user_io_write(png_structp png_ptr, png_bytep data, png_size_t length)
             {
@@ -55,13 +70,11 @@ namespace pdftoedn
                       case csIndexed:
                       case csSeparation:
                           png_color_type = PNG_COLOR_TYPE_PALETTE;
-                          //                          std::cerr << "    setting PNG type: PNG_COLOR_TYPE_PALETTE" << std::endl;
                           break;
 
                       case csDeviceGray:
                       case csCalGray:
                           png_color_type = PNG_COLOR_TYPE_GRAY;
-                          //                          std::cerr << "    setting PNG type: PNG_COLOR_TYPE_GRAY" << std::endl;
                           break;
 
                       case csDeviceCMYK:
@@ -73,7 +86,6 @@ namespace pdftoedn
                       case csDeviceN:
                       default:
                           png_color_type = PNG_COLOR_TYPE_RGB;
-                          //                          std::cerr << "    setting PNG type: PNG_COLOR_TYPE_RGB" << std::endl;
                           break;
                     }
                 }
@@ -88,11 +100,6 @@ namespace pdftoedn
                                         ImageStream* img_str, uint32_t width, uint32_t height,
                                         uint8_t num_pix_comps, GfxColorSpaceMode cspace_mode, GfxColorSpace* cspace)
             {
-                // set error handling since png_* calls are made in here
-                if (setjmp(png_jmpbuf(png_ptr))) {
-                    return false;
-                }
-
                 // read the image bytes
                 img_str->reset();
 
@@ -192,10 +199,10 @@ namespace pdftoedn
                 // you can supply NULL for the last three parameters.  We also check that
                 // the library version is compatible with the one used at compile time,
                 // in case we are using dynamically linked libraries.
-                png_structp png_ptr;
-                png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-                                                  NULL, NULL, NULL); // (void *)user_error_ptr, user_error_fn, user_warning_fn);
-
+                png_structp png_ptr= png_create_write_struct(PNG_LIBPNG_VER_STRING,
+                                                             NULL,
+                                                             user_error_fn,
+                                                             user_warning_fn);
                 if (!png_ptr) {
                     return false;
                 }
@@ -204,14 +211,6 @@ namespace pdftoedn
                 png_infop info_ptr = png_create_info_struct(png_ptr);
                 if (!info_ptr) {
                     png_destroy_write_struct(&png_ptr,  (png_infopp)NULL);
-                    return false;
-                }
-
-                // Set error handling.  REQUIRED if you aren't supplying your own
-                // error hadnling functions in the png_create_write_struct() call.
-                if (setjmp(png_jmpbuf(png_ptr))) {
-                    // If we get here, we had a problem writing to the stream
-                    png_destroy_write_struct(&png_ptr, &info_ptr);
                     return false;
                 }
 
@@ -303,19 +302,6 @@ namespace pdftoedn
                 png_set_gAMA(png_ptr, info_ptr, gamma);
 #endif
 
-#if 0
-                // Optionally write comments into the image
-                text_ptr[0].key = "Title";
-                text_ptr[0].text = "Mona Lisa";
-                text_ptr[0].compression = PNG_TEXT_COMPRESSION_NONE;
-                text_ptr[1].key = "Author";
-                text_ptr[1].text = "Leonardo DaVinci";
-                text_ptr[1].compression = PNG_TEXT_COMPRESSION_NONE;
-                text_ptr[2].key = "Description";
-                text_ptr[2].text = "<long text>";
-                text_ptr[2].compression = PNG_TEXT_COMPRESSION_zTXt;
-                png_set_text(png_ptr, info_ptr, text_ptr, 2);
-#endif
                 // other optional chunks like cHRM, bKGD, tRNS, tIME, oFFs, pHYs,
 
                 // Write the file header information.
@@ -360,16 +346,18 @@ namespace pdftoedn
                 png_set_packswap(png_ptr);
 
                 // ready to copy the data - iterate through the lines
-                if (!copy_image_data(png_ptr, img_str, width, height, num_pix_comps, cspace_mode, color_map->getColorSpace())) {
-                    png_destroy_write_struct(&png_ptr, &info_ptr);
-                    return false;
+                bool write_status;
+                try
+                {
+                    write_status = copy_image_data(png_ptr, img_str, width, height, num_pix_comps, cspace_mode, color_map->getColorSpace());
+                } catch (pnglib_error& e) {
+                    write_status = false;
                 }
 
-                // You can write optional chunks like tEXt, zTXt, and tIME at the end
-                // as well.
-
-                // finish writing the rest of the file
-                png_write_end(png_ptr, info_ptr);
+                if (write_status) {
+                    // finish writing the rest of the file
+                    png_write_end(png_ptr, info_ptr);
+                }
 
                 // free the palette if allocated
                 if (palette) {
@@ -378,7 +366,6 @@ namespace pdftoedn
 
                 // clean up after the write, and free any memory allocated
                 png_destroy_write_struct(&png_ptr, &info_ptr);
-
                 return true;
             }
 
@@ -395,14 +382,11 @@ namespace pdftoedn
                                    bool mask_invert)
             {
                 // Create and initialize the png_struct with the desired error handler
-                // functions.  If you want to use the default stderr and longjump method,
-                // you can supply NULL for the last three parameters.  We also check that
-                // the library version is compatible with the one used at compile time,
-                // in case we are using dynamically linked libraries.
-                png_structp png_ptr;
-                png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-                                                  NULL, NULL, NULL); // (void *)user_error_ptr, user_error_fn, user_warning_fn);
-
+                // functions.
+                png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
+                                                              NULL,
+                                                              user_error_fn,
+                                                              user_warning_fn);
                 if (!png_ptr) {
                     return false;
                 }
@@ -411,14 +395,6 @@ namespace pdftoedn
                 png_infop info_ptr = png_create_info_struct(png_ptr);
                 if (!info_ptr) {
                     png_destroy_write_struct(&png_ptr,  (png_infopp)NULL);
-                    return false;
-                }
-
-                // Set error handling.  REQUIRED if you aren't supplying your own
-                // error hadnling functions in the png_create_write_struct() call.
-                if (setjmp(png_jmpbuf(png_ptr))) {
-                    // If we get here, we had a problem writing to the stream
-                    png_destroy_write_struct(&png_ptr, &info_ptr);
                     return false;
                 }
 
@@ -443,7 +419,7 @@ namespace pdftoedn
                       break;
                   default:
                       std::stringstream err;
-                      err << __FUNCTION__ << " - image unexpected cspace mode (" << color_map->getColorSpace()->getColorSpaceModeName(cspace_mode) << ")";
+                      err << __FUNCTION__ << " - image unhandled cspace mode (" << color_map->getColorSpace()->getColorSpaceModeName(cspace_mode) << ")";
                       et.log_error( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, err.str() );
 
                       png_destroy_write_struct(&png_ptr, &info_ptr);
@@ -497,56 +473,65 @@ namespace pdftoedn
                 img_str->reset();
                 mask_str->reset();
 
-                // process image line by line
-                for (size_t y = 0; y < height; ++y)
+                bool write_status = true;
+                try
                 {
-                    mask_bits = mask_str->getLine();
-
-                    // poppler returns some masked images w/ a color map
-                    if (mask_color_map) {
-                        mask_color_map->getGrayLine(mask_bits, mask_buf, mask_width);
-                    }
-                    else {
-                        // no cmap - just read the value and invert if needed
-                        for (size_t mx = 0; mx < mask_width; mx++) {
-                            bool bit = (mask_invert ? !mask_bits[mx] : mask_bits[mx]);
-                            mask_buf[mx] = (bit ? 0 : 0xff);
-                        }
-                    }
-
-                    // now process image data
-                    for (size_t x = 0, mx = 0; x < width * o_num_pix_comps;)
+                    // process image line by line
+                    for (size_t y = 0; y < height; ++y)
                     {
-                        if (img_str->getPixel(pix)) {
-                            if (num_pix_comps > 1) {
-                                GfxRGB rgb;
-                                color_map->getRGB(pix, &rgb);
-                                row[x++] = colToByte(rgb.r);
-                                row[x++] = colToByte(rgb.g);
-                                row[x++] = colToByte(rgb.b);
-                            } else {
-                                GfxGray g;
-                                color_map->getGray(pix, &g);
-                                uint8_t c = colToByte(g);
+                        mask_bits = mask_str->getLine();
 
-                                row[x++] = c;
-                                row[x++] = c;
-                                row[x++] = c;
+                        // poppler returns some masked images w/ a color map
+                        if (mask_color_map) {
+                            mask_color_map->getGrayLine(mask_bits, mask_buf, mask_width);
+                        }
+                        else {
+                            // no cmap - just read the value and invert if needed
+                            for (size_t mx = 0; mx < mask_width; mx++) {
+                                bool bit = (mask_invert ? !mask_bits[mx] : mask_bits[mx]);
+                                mask_buf[mx] = (bit ? 0 : 0xff);
                             }
                         }
 
-                        // and set alpha to the mask value
-                        row[x++] = mask_buf[mx++];
+                        // now process image data
+                        for (size_t x = 0, mx = 0; x < width * o_num_pix_comps;)
+                        {
+                            if (img_str->getPixel(pix)) {
+                                if (num_pix_comps > 1) {
+                                    GfxRGB rgb;
+                                    color_map->getRGB(pix, &rgb);
+                                    row[x++] = colToByte(rgb.r);
+                                    row[x++] = colToByte(rgb.g);
+                                    row[x++] = colToByte(rgb.b);
+                                } else {
+                                    GfxGray g;
+                                    color_map->getGray(pix, &g);
+                                    uint8_t c = colToByte(g);
+
+                                    row[x++] = c;
+                                    row[x++] = c;
+                                    row[x++] = c;
+                                }
+                            }
+
+                            // and set alpha to the mask value
+                            row[x++] = mask_buf[mx++];
+                        }
+                        png_write_rows(png_ptr, &row, 1);
                     }
-                    png_write_rows(png_ptr, &row, 1);
+                } catch (pnglib_error& e) {
+                    write_status = false;
                 }
+
                 mask_str->close();
 
                 delete [] mask_buf;
                 png_free(png_ptr, row);
 
                 // finish writing the rest of the file
-                png_write_end(png_ptr, info_ptr);
+                if (write_status) {
+                    png_write_end(png_ptr, info_ptr);
+                }
 
                 // free the palette if allocated
                 if (palette) {
@@ -555,7 +540,6 @@ namespace pdftoedn
 
                 // clean up after the write, and free any memory allocated
                 png_destroy_write_struct(&png_ptr, &info_ptr);
-
                 return true;
             }
 
@@ -566,10 +550,10 @@ namespace pdftoedn
             bool encode_mask(std::ostream& output, ImageStream* img_str, uint32_t width, uint32_t height,
                              const StreamProps& properties)
             {
-                png_structp png_ptr;
-                png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-                                                  NULL, NULL, NULL); // (void *)user_error_ptr, user_error_fn, user_warning_fn);
-
+                png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
+                                                              NULL,
+                                                              user_error_fn,
+                                                              user_warning_fn);
                 if (!png_ptr) {
                     return false;
                 }
@@ -577,11 +561,6 @@ namespace pdftoedn
                 png_infop info_ptr = png_create_info_struct(png_ptr);
                 if (!info_ptr) {
                     png_destroy_write_struct(&png_ptr,  (png_infopp)NULL);
-                    return false;
-                }
-
-                if (setjmp(png_jmpbuf(png_ptr))) {
-                    png_destroy_write_struct(&png_ptr, &info_ptr);
                     return false;
                 }
 
@@ -641,17 +620,28 @@ namespace pdftoedn
                 img_str->reset();
 
                 uint8_t* row = new uint8_t[ width ];
-                for (size_t y = 0; y < height; y++) {
-                    Guchar* pix = img_str->getLine();
-                    for (size_t x = 0; x < width; x++) {
-                        row[x] = (properties.is_inverted() ? !pix[x] : pix[x]);
+
+                bool write_status = true;
+
+                try
+                {
+                    for (size_t y = 0; y < height; y++) {
+                        Guchar* pix = img_str->getLine();
+                        for (size_t x = 0; x < width; x++) {
+                            row[x] = (properties.is_inverted() ? !pix[x] : pix[x]);
+                        }
+                        png_write_rows(png_ptr, &row, 1);
                     }
-                    png_write_rows(png_ptr, &row, 1);
+                } catch (pnglib_error& e) {
+                    write_status = false;
                 }
+
                 delete [] row;
 
                 // finish writing the rest of the file
-                png_write_end(png_ptr, info_ptr);
+                if (write_status) {
+                    png_write_end(png_ptr, info_ptr);
+                }
 
                 // cleanup
                 png_free(png_ptr, palette);
@@ -671,9 +661,10 @@ namespace pdftoedn
                                    uint32_t width, uint32_t height, uint32_t num_pix_comps, uint8_t bpp,
                                    GfxImageColorMap *color_map)
             {
-                png_structp png_ptr;
-                png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-
+                png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
+                                                              NULL,
+                                                              user_error_fn,
+                                                              user_warning_fn);
                 if (!png_ptr) {
                     return false;
                 }
@@ -682,11 +673,6 @@ namespace pdftoedn
                 png_infop info_ptr = png_create_info_struct(png_ptr);
                 if (!info_ptr) {
                     png_destroy_write_struct(&png_ptr, (png_infopp) NULL);
-                    return false;
-                }
-
-                if (setjmp(png_jmpbuf(png_ptr))) {
-                    png_destroy_write_struct(&png_ptr, &info_ptr);
                     return false;
                 }
 
@@ -736,21 +722,29 @@ namespace pdftoedn
 
                 // write the data, row by row
                 img_str->reset();
-                GfxGray gray;
-                for (size_t y = 0; y < height; y++) {
-                    Guchar* pix = img_str->getLine();
+                bool write_status = true;
+                try
+                {
+                    GfxGray gray;
+                    for (size_t y = 0; y < height; y++) {
+                        Guchar* pix = img_str->getLine();
 
-                    for (size_t x = 0; x < width; x++) {
-                        color_map->getGray(&pix[x], &gray);
-                        row[x] = (png_byte) colToByte(gray);
+                        for (size_t x = 0; x < width; x++) {
+                            color_map->getGray(&pix[x], &gray);
+                            row[x] = (png_byte) colToByte(gray);
+                        }
+                        png_write_rows(png_ptr, &row, 1);
                     }
-                    png_write_rows(png_ptr, &row, 1);
+                } catch (pnglib_error& e) {
+                    write_status = false;
                 }
 
                 png_free(png_ptr, row);
 
-                // finish writing the rest of the file
-                png_write_end(png_ptr, info_ptr);
+                if (write_status) {
+                    // finish writing the rest of the file
+                    png_write_end(png_ptr, info_ptr);
+                }
 
                 // clean up after the write, and free any memory allocated
                 png_destroy_write_struct(&png_ptr, &info_ptr);

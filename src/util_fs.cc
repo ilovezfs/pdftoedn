@@ -1,4 +1,5 @@
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <iostream>
 
@@ -12,6 +13,7 @@
 #endif
 
 #include "util_fs.h"
+#include "pdf_error_tracker.h"
 
 namespace pdftoedn
 {
@@ -47,28 +49,17 @@ namespace pdftoedn
 
                 // check input file
                 if (!fs::exists(infile)) {
-                    std::cerr << infile << " does not exist" << std::endl;
-                    throw std::exception();
+                    std::stringstream ss;
+                    ss << infile << " does not exist" << std::endl;
+                    throw invalid_file(ss.str());
                 }
 
                 if (!fs::is_regular_file(infile)) {
-                    std::cerr << infile << " is not a valid file" << std::endl;
-                    throw std::exception();
+                    std::stringstream ss;
+                    ss << infile << " is not a valid file" << std::endl;
+                    throw invalid_file(ss.str());
                 }
                 return true;
-            }
-
-
-            bool directory_exists(const boost::filesystem::path& dir)
-            {
-                namespace fs = boost::filesystem;
-
-                // check input file
-                if (!fs::exists(dir)) {
-                    return false;
-                }
-
-                return fs::is_directory(dir);
             }
 
 

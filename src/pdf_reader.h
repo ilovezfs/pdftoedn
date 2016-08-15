@@ -32,12 +32,13 @@ namespace pdftoedn
         virtual ~PDFReader() { delete eng_odev; }
 
         bool pre_process_fonts();
-        bool has_outline() const { return outline_output.has_content(); }
+        std::ostream& process(std::ostream& o);
 
-        friend std::ostream& operator<<(std::ostream& o, PDFReader& doc);
+        friend std::ostream& operator<<(std::ostream& o, PDFReader& doc) {
+            return doc.process(o);
+        }
 
     private:
-        bool init_ok;
         pdftoedn::FontEngine font_engine;
         pdftoedn::EngOutputDev* eng_odev;
         pdftoedn::PdfOutline outline_output;
@@ -52,11 +53,11 @@ namespace pdftoedn
         void outline_link_dest(LinkDest* dest, PdfOutline::Entry& entry);
         uintmax_t get_link_page_num(LinkDest* link);
 
-        void display_page(::OutputDev *dev, uintmax_t page);
+        void processPage(::OutputDev* dev, uintmax_t page);
 
         // returns document metadata
-        std::ostream& meta(std::ostream& o);
-        std::ostream& process_page(uintmax_t page_num, std::ostream& o);
+        std::ostream& output_meta(std::ostream& o);
+        std::ostream& output_page(uintmax_t page_num, std::ostream& o);
     };
 
 } // namespace

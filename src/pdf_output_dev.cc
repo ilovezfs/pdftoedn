@@ -487,11 +487,16 @@ namespace pdftoedn
             std::ostringstream blob, xformed_blob;
             uint8_t transformed = util::xform::XFORM_NONE;
 
-            util::encode::encode_mask(blob, imgStr, width, height, properties);
+            bool encode_status = util::encode::encode_mask(blob, imgStr, width, height, properties);
 
             // poppler cleanup
             delete imgStr;
             str->close();
+
+            // don't continue if encode failed
+            if (!encode_status) {
+                return;
+            }
 
             // handle transformations if needed
             if (ctm.is_transformed()) {
@@ -594,14 +599,18 @@ namespace pdftoedn
             std::ostringstream blob, xformed_blob;
             uint8_t transformed = util::xform::XFORM_NONE;
 
-            util::encode::encode_rgba_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap,
-                                            maskImgStr, maskWidth, maskHeight, maskColorMap->getNumPixelComps(), maskColorMap->getBits(), maskColorMap,
-                                            false);
-
+            bool encode_status = util::encode::encode_rgba_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap,
+                                                                 maskImgStr, maskWidth, maskHeight, maskColorMap->getNumPixelComps(), maskColorMap->getBits(), maskColorMap,
+                                                                 false);
             // poppler cleanup
             delete maskImgStr;
             delete imgStr;
             str->close();
+
+            // don't continue if encode failed
+            if (!encode_status) {
+                return;
+            }
 
             // handle transformations if needed
             if (ctm.is_transformed()) {
@@ -696,14 +705,19 @@ namespace pdftoedn
             std::ostringstream blob, xformed_blob;
             uint8_t transformed = util::xform::XFORM_NONE;
 
-            util::encode::encode_rgba_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap,
-                                            maskImgStr, maskWidth, maskHeight, 1, 1, NULL,
-                                            maskInvert);
+            bool encode_status = util::encode::encode_rgba_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap,
+                                                                 maskImgStr, maskWidth, maskHeight, 1, 1, NULL,
+                                                                 maskInvert);
 
             // poppler cleanup
             delete maskImgStr;
             delete imgStr;
             str->close();
+
+            // don't continue if encode failed
+            if (!encode_status) {
+                return;
+            }
 
             // handle transformations if needed
             if (ctm.is_transformed()) {
@@ -787,11 +801,15 @@ namespace pdftoedn
             std::ostringstream blob, xformed_blob;
             uint8_t transformed = util::xform::XFORM_NONE;
 
-            util::encode::encode_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap);
+            bool encode_status = util::encode::encode_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap);
 
             // poppler cleanup
             delete imgStr;
             str->close();
+
+            if (!encode_status) {
+                return;
+            }
 
             // handle transformations if needed
             if (ctm.is_transformed()) {

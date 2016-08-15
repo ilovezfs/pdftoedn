@@ -20,12 +20,15 @@ namespace pdftoedn
         "unimplemented",
         "internal",
 
+        // graphics libraries
+        "png_warning",
+        "png_error",
+
         // our errors from here on
         "", // entry for the delimiter
 
         "invalid_args",
         "unhandled_link_action",
-        "fe_init_failure",
         "fe_font_freetype",
         "fe_font_read",
         "fe_font_read_unsupported_type",
@@ -121,16 +124,12 @@ namespace pdftoedn
     }
 
     //
-    // checks if there's anything more critical than warnings
+    // checks if there's anything more serious than warnings
     bool ErrorTracker::errors_reported() const
     {
-        // don't report warnings as errors so skip SYMBOL_ERROR_SYNTAX_WARNING
-        if (std::any_of( errors.begin(), errors.end(),
-                         [](const error* e) { return (e->higher_than(error::L_WARNING)); }
-                         )) {
-            return true;
-        }
-        return false;
+        return std::any_of( errors.begin(), errors.end(),
+                            [](const error* e) { return (e->higher_than(error::L_WARNING)); }
+                            );
     }
 
 

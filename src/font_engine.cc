@@ -30,23 +30,18 @@ namespace pdftoedn
 
     //
     // init freetype
-    bool FontEngine::init()
+    FontEngine::FontEngine(XRef *doc_xref) :
+        xref(doc_xref), has_font_warnings(false),
+        ft_lib(NULL), cur_doc_font(NULL)
     {
         FT_Library ftl;
 
-        if (engine_ok) {
-            // already initialized
-            return true;
-        }
-
         // set up freetype
         if (FT_Init_FreeType(&ftl) != 0) {
-            return false;
+            throw init_error("Error initializing FreeType");
         }
 
         ft_lib = ftl;
-        engine_ok = true;
-        return true;
     }
 
     //

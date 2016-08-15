@@ -11,7 +11,7 @@ status=$?
 
 test_end
 
-if [ $status -eq 5 ]; then
+if [ $status -eq 1 ]; then
     exit 0
 fi
 echo "Error invalid PDF error not detected"

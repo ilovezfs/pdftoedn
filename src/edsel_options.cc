@@ -25,13 +25,14 @@ namespace pdftoedn {
                      const Flags& f, intmax_t pg_num) :
         file_name(filename), output_file(out_filename), flags(f), page_num(pg_num)
     {
-        boost::filesystem::path file_path(filename);
+        namespace fs = boost::filesystem;
+        fs::path file_path(filename);
 
         // check input file
         if (util::fs::check_valid_input_file(file_path)) // throws if error
         {
             // check that it looks like a PDF by looking at the header (first 8 bytes. e.g.: "%PDF-1.3")
-            boost::filesystem::ifstream f(filename);
+            fs::ifstream f(filename);
             char buf[9] = { 0 };
             f.read(buf, 8);
             f.close();
@@ -39,35 +40,45 @@ namespace pdftoedn {
 
             boost::cmatch what;
             if (!boost::regex_match(buf, what, boost::regex("%PDF\\-[1-9]\\.[0-9]"), boost::match_default)) {
-                std::cerr << file_name << " does not look like a valid PDF" << std::endl;
-                throw invalid_pdf();
+                std::stringstream ss;
+                ss << file_name << " does not look like a valid PDF";
+                throw invalid_file(ss.str());
             }
         }
 
         // check the destination
-        boost::filesystem::path output_filepath(out_filename);
-        boost::filesystem::path parent_path(output_filepath.parent_path());
+        fs::path output_filepath(out_filename);
+        fs::path parent_path(output_filepath.parent_path());
 
         // output file path is required and will have to be created so
         // check that its parent path exists
         if (!parent_path.empty()) {
-            if (!util::fs::directory_exists(parent_path)) {
-                std::cerr << "destination folder '" << parent_path << "' does not exist" << std::endl;
-                throw std::exception();
+            if (!fs::exists(parent_path) || !fs::is_directory(parent_path)) {
+                std::stringstream ss;
+                ss << "destination folder '" << parent_path << "' does not exist";
+                throw invalid_file(ss.str());
             }
             output_path = parent_path.string();
         }
 
         // check if the destination file exists
-        if (boost::filesystem::exists(output_filepath))
+        if (fs::exists(output_filepath))
         {
             // remove the file if asked to do so
-            if (boost::filesystem::is_regular_file(output_filepath) && flags.force_output_write) {
-                boost::filesystem::remove(output_filepath);
+            if (flags.force_output_write) {
+                // but check if it's a file that can be deleted
+                if (!fs::is_regular_file(output_filepath)) {
+                    std::stringstream ss;
+                    ss << output_filepath << " destination exists but it is not a regular file and can't be overwritten";
+                    throw invalid_file(ss.str());
+
+                }
+                fs::remove(output_filepath);
             } else {
                 // something exists with the name
-                std::cerr << output_filepath << " destination file exists" << std::endl;
-                throw std::exception();
+                std::stringstream ss;
+                ss << output_filepath << " destination file exists";
+                throw invalid_file(ss.str());
             }
         }
 
@@ -88,7 +99,7 @@ namespace pdftoedn {
 
             } catch (std::exception& e) {
                 // otherwise, load from the config directory
-                boost::filesystem::path mapfile(DEFAULT_CONFIG_DIR);
+                fs::path mapfile(DEFAULT_CONFIG_DIR);
                 mapfile.append(fontmap).replace_extension(FONT_MAP_FILE_EXT);
 
                 // set the absolute path to the font map, then check it
@@ -98,19 +109,15 @@ namespace pdftoedn {
             }
         }
 
-        // load the default config file
-        if (!util::config::read_map_config(doc_font_maps, DEFAULT_FONT_MAP)) {
-            std::cerr << "Internal error: default font map configuration could not be done" << std::endl;
-            throw std::exception();
-        }
+        // load the default config file - throws if it fails
+        util::config::read_map_config(doc_font_maps, DEFAULT_FONT_MAP);
 
         // load the font map if set
         if (!f_map.empty()) {
-            if (!load_config(f_map)) {
-                throw std::exception();
+            // load_config throws if error
+            if (load_config(f_map)) {
+                font_map = f_map;
             }
-
-            font_map = f_map;
         }
 
         // configure some useful paths, etc.
@@ -119,7 +126,15 @@ namespace pdftoedn {
         // determine the resource directory based on the output path
         // but don't create it yet as some documents might not have
         // images, etc. that will need saving.
-        resource_dir = (parent_path / doc_base_name).string();
+        fs::path res_dir = (parent_path / doc_base_name);
+
+        // but, if it exists, make sure it's a directory
+        if (fs::exists(res_dir) && !fs::is_directory(res_dir)) {
+            std::stringstream ss;
+            ss << res_dir.string() << " resource path exists but is not a folder";
+            throw invalid_file(ss.str());
+        }
+        resource_dir = res_dir.string();
 
         //        std::cerr << *this << std::endl;
     }
@@ -132,18 +147,15 @@ namespace pdftoedn {
         char* font_map_data;
         // try load the file - first read the contents
         if (!util::fs::read_text_file(new_font_map_file, &font_map_data)) {
-            std::cerr << "Error reading specified font map file: "
-                      << new_font_map_file << std::endl;
-            return false;
+            std::stringstream ss;
+            ss << "Error reading specified font map file: " << new_font_map_file << std::endl;
+            throw invalid_file(ss.str());
         }
 
-        // parse the JSON
-        bool file_read = util::config::read_map_config(doc_font_maps, font_map_data);
+        // parse the JSON - throws if error
+        util::config::read_map_config(doc_font_maps, font_map_data);
         delete [] font_map_data;
 
-        if (!file_read) {
-            return false;
-        }
         return true;
     }
 

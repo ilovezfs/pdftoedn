@@ -69,7 +69,6 @@ namespace pdftoedn {
             std::string info() {
                 // create a dummy FE to get the runtime version of FT
                 FontEngine fe(NULL);
-                fe.init();
 
                 std::stringstream v;
                 v << " poppler " << poppler() << std::endl
@@ -84,16 +83,14 @@ namespace pdftoedn {
             // version EDN hash
             util::edn::Hash& libs(const pdftoedn::FontEngine& fe, util::edn::Hash& version_h)
             {
-                version_h.reserve(9);
-                version_h.push( SYMBOL_APP         , PDFTOEDN_VERSION );
-                version_h.push( SYMBOL_POPPLER     , poppler() );
-                version_h.push( SYMBOL_LIBPNG      , libpng() );
-                version_h.push( SYMBOL_BOOST       , boost() );
-                if (fe.is_ok()) {
-                    version_h.push( SYMBOL_FREETYPE, freetype(fe) );
-                }
-                version_h.push( SYMBOL_LEPTONICA   , leptonica() );
-                version_h.push( SYMBOL_RAPIDJSON   , rapidjson() );
+                version_h.reserve(7);
+                version_h.push( SYMBOL_APP      , PDFTOEDN_VERSION );
+                version_h.push( SYMBOL_POPPLER  , poppler() );
+                version_h.push( SYMBOL_LIBPNG   , libpng() );
+                version_h.push( SYMBOL_BOOST    , boost() );
+                version_h.push( SYMBOL_FREETYPE , freetype(fe) );
+                version_h.push( SYMBOL_LEPTONICA, leptonica() );
+                version_h.push( SYMBOL_RAPIDJSON, rapidjson() );
                 return version_h;
             }
         } // version

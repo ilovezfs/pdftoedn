@@ -133,11 +133,9 @@ int main(int argc, char** argv)
     {
         pdftoedn::options = pdftoedn::Options(filename, font_map_file, output_file, flags, (page_number >= 0 ? page_number : -1));
     }
-    catch (pdftoedn::invalid_pdf& e) {
-        return 5;
-    }
     catch (std::exception& e) {
-        return 2;
+        std::cout << e.what() << std::endl;
+        return 1;
     }
 
     // dump the font map list and exit if the -F flag was passed
@@ -156,40 +154,35 @@ int main(int argc, char** argv)
     // register the error handler for this document
     setErrorCallback(&pdftoedn::ErrorTracker::error_handler, &pdftoedn::et);
 
-    // open the doc using arguments in Options - this step reads
-    // general properties from the doc (num pages, PDF version) and
-    // the outline
-    pdftoedn::PDFReader doc_reader;
+    uintmax_t status = 0;
+    try
+    {
+        // open the doc using arguments in Options - this step reads
+        // general properties from the doc (num pages, PDF version) and
+        // the outline
+        pdftoedn::PDFReader doc_reader;
 
-    // document is open and basic meta has been read. Before trying to
-    // generate output, ensure the page number given is within range
-    if (pdftoedn::options.page_number() > 0 &&
-        pdftoedn::options.page_number() >= doc_reader.getNumPages()) {
-        std::cout << "Error: requested page number " << pdftoedn::options.page_number()
-                  << " is not valid. Document has "
-                  << doc_reader.getNumPages() << " page"
-                  << ((doc_reader.getNumPages() > 1) ? 's' : '\0')
-                  << " and value must be 0-indexed."
-                  << std::endl;
-        delete globalParams;
-        return 1;
+        std::ofstream output;
+        output.open(pdftoedn::options.outputfile().c_str());
+
+        if (!output.is_open()) {
+            status = 1;
+            std::stringstream ss;
+            ss << pdftoedn::options.outputfile() << "Cannot open file for write";
+            throw pdftoedn::invalid_file(ss.str());
+        }
+
+        // write the document data
+        output << doc_reader;
+
+        // done
+        output.close();
+
+    } catch (std::exception& e) {
+        std::cout << e.what() << std::endl;
     }
 
-    std::ofstream output;
-    output.open(pdftoedn::options.outputfile().c_str());
-
-    if (!output.is_open()) {
-        std::cout << pdftoedn::options.outputfile()
-                  << "Cannot open file for write" << std::endl;
-        return 1;
-    }
-
-    // write the document data
-    output << doc_reader;
-
-    // done
-    output.close();
     delete globalParams;
 
-    return 0;
+    return status;
 }

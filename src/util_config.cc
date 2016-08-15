@@ -227,31 +227,41 @@ namespace pdftoedn
                 std::cerr << buffer.GetString() << std::endl;
 #endif
 
-                if (d.HasParseError()){
-                    std::cerr << "JSON parse error: " << GetParseError_En(d.GetParseError()) << std::endl;
-                    return false;
+                if (d.HasParseError()) {
+                    std::stringstream ss;
+                    ss << "Fontmap JSON parse error: " << GetParseError_En(d.GetParseError());
+                    throw invalid_file(ss.str());
                 }
 
-                if (!d.IsObject())
-                {
-                    std::cerr << "Invalid config format - expecting an object at the root level" << std::endl;
-                    return false;
-
+                if (!d.IsObject()) {
+                    std::stringstream ss;
+                    ss << "Invalid fontmap format - expecting an object at the root level";
+                    throw invalid_file(ss.str());
                 }
 
                 // parse the glyph & font maps to build the lookup
                 // tables. Do glyph maps first so we can confirm
                 // references to them from the font maps are valid
-                const rapidjson::Value& glyphmaps = d["glyphMaps"];
-                if (!read_glyph_maps(glyphmaps, maps)) {
-                    std::cerr << "Invalid config format - error parsing glyph list" << std::endl;
-                    return false;
+                if (d.HasMember("glyphMaps")) {
+                    const rapidjson::Value& glyphmaps = d["glyphMaps"];
+                    if (!read_glyph_maps(glyphmaps, maps)) {
+                        std::stringstream ss;
+                        ss << "Invalid config format - error parsing glyph list";
+                        throw invalid_file(ss.str());
+                    }
+                }
+
+                if (!d.HasMember("fontMaps")) {
+                    std::stringstream ss;
+                    ss << "Invalid config file - no \"fontMaps\" entry found";
+                    throw invalid_file(ss.str());
                 }
 
                 const rapidjson::Value& fontmaps = d["fontMaps"];
                 if (!read_font_maps(fontmaps, maps)) {
-                    std::cerr << "Invalid config format - error parsing font map list" << std::endl;
-                    return false;
+                    std::stringstream ss;
+                    ss << "Invalid config format - error parsing font map list";
+                    throw invalid_file(ss.str());
                 }
                 return true;
             }

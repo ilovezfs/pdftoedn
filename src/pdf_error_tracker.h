@@ -33,12 +33,15 @@ namespace pdftoedn
             ERROR_UNIMPLEMENTED,
             ERROR_INTERNAL,
 
+            // graphic libraries
+            ERROR_PNG_WARNING,
+            ERROR_PNG_ERROR,
+
             // our own errors from here on
             ERROR_NONE, // not an error - used to separate poppler errors from our own
 
             ERROR_INVALID_ARGS,
             ERROR_UNHANDLED_LINK_ACTION,
-            ERROR_FE_INIT_FAILURE,
             ERROR_FE_FONT_FT,
             ERROR_FE_FONT_READ,
             ERROR_FE_FONT_READ_UNSUPPORTED,
@@ -129,8 +132,15 @@ namespace pdftoedn
         bool error_muted(error_type e) const;
     };
 
-    struct invalid_pdf : public std::invalid_argument {
-        invalid_pdf() : invalid_argument("Invalid PDF document") {}
+    // exceptions
+    struct init_error : public std::logic_error {
+        init_error(const std::string& what) : logic_error(what) {}
+    };
+    struct invalid_file : public std::invalid_argument {
+        invalid_file(const std::string& what) : invalid_argument(what) {}
+    };
+    struct pnglib_error : public std::runtime_error {
+        pnglib_error(const std::string& what) : runtime_error(what) {}
     };
 
     extern pdftoedn::ErrorTracker et;

@@ -3,6 +3,7 @@
 #include <string>
 
 #include <poppler/Error.h>
+#include <poppler/ErrorCodes.h>
 #include <poppler/GfxState.h>
 #include <poppler/GfxFont.h>
 
@@ -24,6 +25,38 @@ namespace pdftoedn
 
             //
             // error types
+            const char* get_poppler_doc_error_str(int errCode)
+            {
+                // see poppler/ErrorCodes.h
+                switch (errCode) {
+                  case errNone:
+                      return "no error"; break;
+                  case errOpenFile:
+                      return "couldn't open the PDF file"; break;
+                  case errBadCatalog:
+                      return "couldn't read the page catalog"; break;
+                  case errDamaged:
+                      return "PDF file was damaged and couldn't be repaired"; break;
+                  case errEncrypted:
+                      return "file was encrypted and password was incorrect or not supplied"; break;
+                  case errHighlightFile:
+                      return "nonexistent or invalid highlight file"; break;
+                  case errBadPrinter:
+                      return "invalid printer"; break;
+                  case errPrinting:
+                      return "error during printing"; break;
+                  case errPermission:
+                      return "PDF file doesn't allow that operation"; break;
+                  case errBadPageNum:
+                      return "invalid page number"; break;
+                  case errFileIO:
+                      return "file I/O error"; break;
+                  default:
+                      return "Unknown error";
+                }
+                return NULL;
+            }
+
             const char* get_poppler_error_str(ErrorCategory e)
             {
                 switch (e) {

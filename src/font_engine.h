@@ -41,17 +41,10 @@ namespace pdftoedn
     {
     public:
         // constructor / destructor
-        FontEngine(XRef *doc_xref) :
-            xref(doc_xref), engine_ok(false), has_font_warnings(false),
-            ft_lib(NULL), cur_doc_font(NULL)
-        { }
+        FontEngine(XRef *doc_xref);
         virtual ~FontEngine();
 
-        bool is_ok() const { return engine_ok; }
         bool found_font_warnings() const { return has_font_warnings; }
-
-        // set up font engine
-        bool init();
 
         // poppler > 0.24.0 passes a doc Xref on every call to startPage
         void update_document_ref(XRef* doc_xref) { xref = doc_xref; }
@@ -80,7 +73,6 @@ namespace pdftoedn
 
     private:
         XRef *xref; // PDF document ref for object lookup
-        bool engine_ok;
         bool has_font_warnings;
         FontList fonts;
         std::set<double> font_sizes;
