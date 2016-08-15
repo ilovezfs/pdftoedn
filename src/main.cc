@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     // pass things back as utf-8
     if (!std::setlocale( LC_ALL, "" )) {
         std::cout << "Error setting locale" << std::endl;
-        return -1;
+        return pdftoedn::ErrorTracker::CODE_INIT_ERROR;
     }
 
     // parse the options
@@ -95,20 +95,20 @@ int main(int argc, char** argv)
             if ( vm.count("help") ) {
                 std::cout << "Usage: " << boost::filesystem::basename(argv[0]) << " [options] -o <output directory> filename" << std::endl
                           << opts << std::endl;
-                return 1;
+                return pdftoedn::ErrorTracker::CODE_RUNTIME_OK;
             }
             if ( vm.count("version") ) {
                 std::cout << boost::filesystem::basename(argv[0]) << " "
                           << PDFTOEDN_VERSION << std::endl
                           << "Linked libraries: " << std::endl
                           << pdftoedn::util::version::info();
-                return 1;
+                return pdftoedn::ErrorTracker::CODE_RUNTIME_OK;
             }
             if ( vm.count("page_number")) {
                 intmax_t pg = vm["page_number"].as<intmax_t>();
                 if (pg < 0) {
                     std::cout << "Invalid page number " << pg << std::endl;
-                    return 1;
+                    return pdftoedn::ErrorTracker::CODE_INIT_ERROR;
                 }
             }
             po::notify(vm);
@@ -117,14 +117,14 @@ int main(int argc, char** argv)
             std::cout << "Error parsing program arguments: " << e.what() << std::endl
                       << std::endl
                       << opts << std::endl;
-            return 1;
+            return pdftoedn::ErrorTracker::CODE_INIT_ERROR;
         }
     }
     catch (std::exception& e)
     {
         std::cout << "Argument error: " << std::endl
                   << e.what() << std::endl;
-        return 1;
+        return pdftoedn::ErrorTracker::CODE_INIT_ERROR;
     }
 
     //
@@ -135,13 +135,13 @@ int main(int argc, char** argv)
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
-        return 1;
+        return pdftoedn::ErrorTracker::CODE_INIT_ERROR;
     }
 
     // dump the font map list and exit if the -F flag was passed
     if (show_font_list) {
         std::cout << pdftoedn::doc_font_maps << std::endl;
-        return 0;
+        return pdftoedn::ErrorTracker::CODE_RUNTIME_OK;
     }
 
     // init support libs if needed
@@ -166,7 +166,6 @@ int main(int argc, char** argv)
         output.open(pdftoedn::options.outputfile().c_str());
 
         if (!output.is_open()) {
-            status = 1;
             std::stringstream ss;
             ss << pdftoedn::options.outputfile() << "Cannot open file for write";
             throw pdftoedn::invalid_file(ss.str());
@@ -178,8 +177,12 @@ int main(int argc, char** argv)
         // done
         output.close();
 
+        // set the exit code based on the logged errors
+        status = pdftoedn::et.exit_code();
+
     } catch (std::exception& e) {
         std::cout << e.what() << std::endl;
+        status = pdftoedn::ErrorTracker::CODE_INIT_ERROR;
     }
 
     delete globalParams;

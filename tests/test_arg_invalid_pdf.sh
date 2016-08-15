@@ -3,6 +3,8 @@
 [ "x${TESTS_DIR}" = "x" ] && TESTS_DIR="."
 . ${TESTS_DIR}/test_common.sh
 
+EXPECTED_SUBSTR="does not look like a valid PDF"
+
 test_start
 
 # test processing an invalid PDF
@@ -11,8 +13,9 @@ status=$?
 
 test_end
 
-if [ $status -eq 1 ]; then
+flag_set $status $CODE_INIT_ERROR && \
+    check_stdout "$EXPECTED_SUBSTR" && \
     exit 0
-fi
-echo "Error invalid PDF error not detected"
+
+echo "unexpected return value $status"
 exit $status

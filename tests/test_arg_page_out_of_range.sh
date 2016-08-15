@@ -3,6 +3,8 @@
 [ "x${TESTS_DIR}" = "x" ] && TESTS_DIR="."
 . ${TESTS_DIR}/test_common.sh
 
+EXPECTED_SUBSTR="Error: requested page number"
+
 test_start
 
 # document has 6 pages - try to process page 7. Note page arg is
@@ -13,8 +15,9 @@ status=$?
 
 test_end
 
-if [ $status -eq 1 ]; then
+flag_set $status $CODE_INIT_ERROR && \
+    check_stdout "$EXPECTED_SUBSTR" && \
     exit 0
-fi
-echo "Error page ($pg) outside of range was accepted!"
+
+echo "unexpected return value $status"
 exit $status

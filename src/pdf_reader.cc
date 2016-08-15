@@ -372,11 +372,6 @@ namespace pdftoedn
     void PDFReader::outline_level(GooList* items, int level,
                                   std::list<PdfOutline::Entry *>& entry_list)
     {
-        if (!items) {
-            et.log_error(ErrorTracker::ERROR_INVALID_ARGS, MODULE, "PDFReader::outline_level was passed NULL items");
-            return;
-        }
-
         // run through the list
         for (int i = 0; i < items->getLength(); i++)
         {

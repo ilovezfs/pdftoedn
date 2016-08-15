@@ -47,7 +47,6 @@ namespace pdftoedn
             ERROR_FE_FONT_READ_UNSUPPORTED,
             ERROR_FE_FONT_MAPPING,
             ERROR_FE_FONT_MAPPING_DUPLICATE,
-            ERROR_OD_RUNTIME,
             ERROR_OD_UNIMPLEMENTED_CB,
             ERROR_PAGE_DATA,
             ERROR_UT_IMAGE_ENCODE,
@@ -56,6 +55,22 @@ namespace pdftoedn
             ERROR_TYPE_COUNT // delim
         };
 
+        // application exit code flags
+        enum ExitCode {
+            CODE_INIT_ERROR       = 0x80,
+            CODE_RUNTIME_POPPLER  = 0x40,
+            CODE_RUNTIME_IMGWRITE = 0x20,
+            CODE_RUNTIME_IMGXFORM = 0x10,
+            CODE_RUNTIME_APP      = 0x08,
+            CODE_RUNTIME_FONTMAP  = 0x04,
+
+            //...
+            CODE_RUNTIME_OK       = 0
+        };
+
+
+        // ========================================================
+        //
         struct error : public gemable {
             enum level {
                 L_INFO,
@@ -98,6 +113,7 @@ namespace pdftoedn
         static const Symbol SYMBOL_ERROR_LEVELS[];
         static const Symbol SYMBOL_ERRORS;
 
+        ErrorTracker() : exit_code_flags(0) {}
         virtual ~ErrorTracker() { flush_errors(); }
 
         void ignore_error(error_type e); // don't report this error type
@@ -116,6 +132,7 @@ namespace pdftoedn
             log(e, error::L_CRITICAL, mod, msg);
         }
 
+        uint8_t exit_code() const { return exit_code_flags; }
         bool errors_reported() const;
         bool errors_or_warnings_reported() const { return !errors.empty(); }
         void flush_errors();
@@ -126,9 +143,12 @@ namespace pdftoedn
         static void error_handler(void *data, ErrorCategory category, Goffset pos, char *msg);
 
     private:
+
+        uint8_t exit_code_flags;
         std::list<error *> errors;
         std::list<error_type> ignore_errors;
 
+        void set_error_code(error_type e);
         bool error_muted(error_type e) const;
     };
 

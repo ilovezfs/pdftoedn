@@ -2,6 +2,9 @@ TESTS = \
 	test_arg_page_negative.sh \
 	test_arg_page_out_of_range.sh \
 	test_arg_missing_output_file.sh \
+	test_arg_fontmap_does_not_exist.sh \
+	test_arg_invalid_fontmap_file_json_syntax.sh \
+	test_arg_invalid_fontmap_file_no_fontmaps.sh \
 	test_arg_invalid_pdf.sh \
 	test_diff_output.sh
 

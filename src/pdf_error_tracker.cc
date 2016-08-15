@@ -34,7 +34,6 @@ namespace pdftoedn
         "fe_font_read_unsupported_type",
         "fe_font_map",
         "fe_font_map_dup",
-        "od_runtime_error",
         "od_unimplemented_cb",
         "page_data",
         "ut_image_encode",
@@ -93,6 +92,63 @@ namespace pdftoedn
         }
     }
 
+
+    //
+    // set exit code bit flags depending on the error code
+    void ErrorTracker::set_error_code(error_type e)
+    {
+        switch (e)
+        {
+          // treat these as warnings so do nothing with them
+          case ERROR_SYNTAX_WARNING:
+          case ERROR_PNG_WARNING:
+          case ERROR_OD_UNIMPLEMENTED_CB:
+              break;
+
+          // poppler errors
+          case ERROR_SYNTAX_ERROR:
+          case ERROR_CONFIG:
+          case ERROR_COMMAND_LINE:
+          case ERROR_IO:
+          case ERROR_NOT_ALLOWED:
+          case ERROR_UNIMPLEMENTED:
+          case ERROR_INTERNAL:
+              exit_code_flags |= CODE_RUNTIME_POPPLER;
+              break;
+
+          // image conversion errors
+          case ERROR_PNG_ERROR:
+          case ERROR_UT_IMAGE_ENCODE:
+              exit_code_flags |= CODE_RUNTIME_IMGWRITE;
+              break;
+
+          // image transform errors
+          case ERROR_UT_IMAGE_XFORM:
+              exit_code_flags |= CODE_RUNTIME_IMGXFORM;
+              break;
+
+          // font map errors
+          case ERROR_FE_FONT_FT:
+          case ERROR_FE_FONT_READ:
+          case ERROR_FE_FONT_READ_UNSUPPORTED:
+          case ERROR_FE_FONT_MAPPING:
+          case ERROR_FE_FONT_MAPPING_DUPLICATE:
+              exit_code_flags |= CODE_RUNTIME_FONTMAP;
+              break;
+
+          case ERROR_INVALID_ARGS:
+          case ERROR_UNHANDLED_LINK_ACTION:
+          case ERROR_PAGE_DATA:
+              exit_code_flags |= CODE_RUNTIME_APP;
+              break;
+
+          default:
+              std::cerr << "Unhandled error code: " << e << std::endl;
+              break;
+        }
+    }
+
+
     //
     // add an entry to the list
     void ErrorTracker::log(error_type e, error::level l, const std::string& module, const std::string& msg)
@@ -109,7 +165,13 @@ namespace pdftoedn
             return;
         }
 
-        // report it
+        // set the status code flag depending on the error type if the
+        // log level is ERROR or CRITICAL
+        if (l > error::L_WARNING) {
+            set_error_code(e);
+        }
+
+        // add it to the list
         errors.push_back( new error(e, l, module, msg) );
     }
 

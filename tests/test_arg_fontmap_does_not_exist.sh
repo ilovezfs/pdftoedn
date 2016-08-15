@@ -3,12 +3,12 @@
 [ "x${TESTS_DIR}" = "x" ] && TESTS_DIR="."
 . ${TESTS_DIR}/test_common.sh
 
-EXPECTED_SUBSTR="Invalid page number"
+EXPECTED_SUBSTR="does not exist"
 
 test_start
 
-# try to pass a negative page argument
-run_cmd "$PDFTOEDN -p -1 -o "$TMPFILE" "$TESTDOC""
+# test invalid -m option
+run_cmd "$PDFTOEDN -m "$TMPFILE" -o "$TMPFILE" "$TESTDOC""
 status=$?
 
 test_end
