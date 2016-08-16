@@ -153,9 +153,9 @@ namespace pdftoedn
             // there are more than one (or, zero, I guess but that
             // would be odd). Wrap the coords in an array
             util::edn::Vector coords_a(coords.size());
-            std::for_each( coords.begin(), coords.end(),
-                           [&](const Coord& c) { coords_a.push(c); }
-                           );
+            for ( const Coord& c : coords ) {
+                coords_a.push( c );
+            }
             cmds_v.push( coords_a );
         }
         o << cmds_v;
@@ -328,14 +328,12 @@ namespace pdftoedn
 
         // traverse the cmds inserting them into an array
         util::edn::Vector path_a(cmds.size() + 1);
-
-        std::for_each( cmds.begin(), cmds.end(),
-                       [&](const PdfSubPathCmd *c) { path_a.push(c); }
-                       );
-
+        for (const PdfSubPathCmd* c : cmds) {
+            path_a.push( c );
+        }
         path_h.push( SYMBOL_COMMAND_LIST, path_a );
 
-        // rubify the bounds
+        // add the path bounds
         path_h.push( BoundingBox::SYMBOL, bounds );
         return path_h;
     }
@@ -474,9 +472,9 @@ namespace pdftoedn
                     // line dash
                     if (!attribs.line_dash.empty()) {
                         util::edn::Vector dash_a(attribs.line_dash.size());
-                        std::for_each( attribs.line_dash.begin(), attribs.line_dash.end(),
-                                       [&](double d) { dash_a.push(d); }
-                                       );
+                        for (double d : attribs.line_dash) {
+                            dash_a.push(d);
+                        }
                         attribs_h.push( GfxAttribs::SYMBOL_DASH_VECTOR, dash_a );
                     }
 

@@ -16,11 +16,12 @@ namespace pdftoedn
     //
     //
 
-    static util::edn::Vector& entry_list_to_edn_vector(const std::list<PdfOutline::Entry *>& l, util::edn::Vector& entries_a)
+    static util::edn::Vector& entry_list_to_edn_vector(const std::list<PdfOutline::Entry *>& entry_list,
+                                                       util::edn::Vector& entries_a)
     {
-        std::for_each( l.begin(), l.end(),
-                       [&](const PdfOutline::Entry* e) { entries_a.push(e); }
-                       );
+        for (const PdfOutline::Entry* e : entry_list) {
+            entries_a.push( e );
+        }
         return entries_a;
     }
 

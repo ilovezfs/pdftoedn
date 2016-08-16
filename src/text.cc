@@ -2,7 +2,6 @@
 #include <sstream>
 #include <list>
 #include <ostream>
-#include <algorithm>
 #include <complex>
 
 #include "doc_page.h"
@@ -422,18 +421,17 @@ namespace pdftoedn
         std::string str;
         intmax_t glyph_idx = -1;
 
-        std::for_each ( chars.begin(), chars.end(),
-                        [&](const PdfChar* c) {
-                            str += util::wstring_to_utfstring(c->wstr());
+        for (const PdfChar* c : chars) {
+            str += util::wstring_to_utfstring(c->wstr());
 
-                            if (!ctm.is_rotated()) {
-                                x_vector_a.push( c->bounding_box().x1() );
-                            }
+            if (!ctm.is_rotated()) {
+                x_vector_a.push( c->bounding_box().x1() );
+            }
 
-                            // if a glyph was encountered in the stream, length will
-                            // be 1 always since they're not spannable
-                            glyph_idx = c->get_glyph_index();
-                        } );
+            // if a glyph was encountered in the stream, length will
+            // be 1 always since they're not spannable
+            glyph_idx = c->get_glyph_index();
+        }
 
         text_h.push( SYMBOL_TEXT,                    str );
 

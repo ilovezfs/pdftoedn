@@ -31,7 +31,8 @@ namespace pdftoedn {
         // check input file
         if (util::fs::check_valid_input_file(file_path)) // throws if error
         {
-            // check that it looks like a PDF by looking at the header (first 8 bytes. e.g.: "%PDF-1.3")
+            // check that it looks like a PDF by looking at the header
+            // (first 8 bytes. e.g.: "%PDF-1.3")
             fs::ifstream f(filename);
             char buf[9] = { 0 };
             f.read(buf, 8);
@@ -189,7 +190,7 @@ namespace pdftoedn {
     }
 
     //
-    // output op
+    // info output
     std::ostream& operator<<(std::ostream& o, const Options& opt)
     {
         o << "+- Options -+" << std::endl
@@ -218,21 +219,28 @@ namespace pdftoedn {
         }
 
         std::list<std::string> opts;
-        if (opt.flags.omit_outline) opts.push_back("omit_outline");
-        if (opt.flags.use_page_crop_box) opts.push_back("use_page_crop_box");
-        if (opt.flags.crop_page) opts.push_back("crop_page");
-        if (opt.flags.include_invisible_text) opts.push_back("invisible_text");
-        if (opt.flags.link_output_only) opts.push_back("links_only");
-        if (opt.flags.include_debug_info) opts.push_back("debug_info");
-        if (opt.flags.libpng_use_best_compression) opts.push_back("png_best_comp");
-        if (opt.flags.force_font_preprocess) opts.push_back("font_preprocess");
-        if (opt.flags.force_output_write) opts.push_back("force_output_write");
+        if (opt.flags.omit_outline)
+            opts.push_back("omit_outline");
+        if (opt.flags.use_page_crop_box)
+            opts.push_back("use_page_crop_box");
+        if (opt.flags.crop_page)
+            opts.push_back("crop_page");
+        if (opt.flags.include_invisible_text)
+            opts.push_back("invisible_text");
+        if (opt.flags.link_output_only)
+            opts.push_back("links_only");
+        if (opt.flags.include_debug_info)
+            opts.push_back("debug_info");
+        if (opt.flags.libpng_use_best_compression)
+            opts.push_back("png_best_comp");
+        if (opt.flags.force_font_preprocess)
+            opts.push_back("font_preprocess");
+        if (opt.flags.force_output_write)
+            opts.push_back("force_output_write");
 
-        if (!opts.empty())
-        {
+        if (!opts.empty()) {
             o << "   Flags:             ";
-            std::for_each( opts.begin(), opts.end(),
-                           [&](const std::string& s) { o << s << " "; } );
+            for (const std::string& s : opts) { o << s << " "; }
         }
 
         return o;

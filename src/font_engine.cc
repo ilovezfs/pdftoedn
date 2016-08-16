@@ -63,16 +63,15 @@ namespace pdftoedn
 
         if (!font_name.empty()) {
             // TESLA-7240: sanitize font names
-            std::for_each( font_name.begin(), font_name.end(),
-                           [&](const char& c) {
-                               // ignore any non-printable characters and replace
-                               // spaces with '-'
-                               if (std::isgraph(c)) {
-                                   clean_name += c;
-                               } else if (std::isspace(c)) {
-                                   clean_name += '-';
-                               }
-                           } );
+            for (char c : font_name) {
+                // ignore any non-printable characters and replace
+                // spaces with '-'
+                if (std::isgraph(c)) {
+                    clean_name += c;
+                } else if (std::isspace(c)) {
+                    clean_name += '-';
+                }
+            }
         }
         return clean_name;
     }
@@ -234,7 +233,7 @@ namespace pdftoedn
                 // remapping
                 font = new PdfFont(font_src, doc_font_maps.check_font_map(font_src));
 
-                fonts.insert( std::pair<PdfRef, PdfFont*>(font_src->font_ref(), font) );
+                fonts.insert( FontListEntry(font_src->font_ref(), font) );
             }
 
             // update the current font pointer

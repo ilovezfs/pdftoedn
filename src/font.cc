@@ -289,9 +289,9 @@ namespace pdftoedn
         const EntityMapPtrList& mappers = font_data->mapper_list();
         if (!mappers.empty()) {
             util::edn::Vector mapper_a(mappers.size());
-            std::for_each( mappers.begin(), mappers.end(),
-                           [&](const EntityMap* m) { mapper_a.push(m->name()); }
-                           );
+            for (const EntityMap* m : mappers) {
+                mapper_a.push( m->name() );
+            }
             font_h.push( SYMBOL_MAPPERS,                   mapper_a );
         }
 
@@ -363,15 +363,13 @@ namespace pdftoedn
 
             rs << std::hex;
 
-            std::for_each( unmapped_codes.begin(), unmapped_codes.end(),
-                           [&,e](const uint32_t& c) {
-                               rs << "0x" << c;
-                               if (e) {
-                                   rs << " (" << e->entity(c) << ")";
-                               }
-                               rs << ' ';
-                           }
-                           );
+            for (uint32_t c : unmapped_codes) {
+                rs << "0x" << c;
+                if (e) {
+                    rs << " (" << e->entity(c) << ")";
+                }
+                rs << ' ';
+            }
             rs << "]";
         }
         return rs.str();

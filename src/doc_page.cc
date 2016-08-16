@@ -4,6 +4,7 @@
 #include <set>
 #include <list>
 #include <vector>
+#include <algorithm>
 
 #include <poppler/GfxState.h>
 
@@ -304,29 +305,6 @@ namespace pdftoedn
 
         // adjust the overall text bounds if needed
         cur_text.bounds.expand( span_bbox );
-
-#if 0
-#if 1
-        std::cerr << "      - inserting " << *span << std::endl;
-#else
-        std::cerr << " ============================================== pushing: \""
-                  << *span << "\" @ ["
-                  << span->x1() << ", "
-                  << span->y1() << "]"
-                  << std::endl;
-
-        std::cerr << " ------------- CUR SET START - "
-                  << text_spans.size() << " text_spans -------------" << std::endl;
-
-        std::for_each( text_spans.begin(), text_spans.end(),
-                       [&](const PdfBoxedItem* t) {
-                           (*i)->dump(std::cerr);
-                           std::cerr << std::endl;
-                       } );
-        std::cerr << " ------------- CUR SET  END  -------------" << std::endl;
-#endif
-#endif
-
         return true;
     }
 
@@ -527,12 +505,8 @@ namespace pdftoedn
         mark_end_of_text();
 
         if (pdftoedn::options.include_debug_info()) {
-            // debug info to logs
-            std::for_each( fonts.begin(), fonts.end(),
-                           [](const PageFont* f) {
-                               f->check_fonts();
-                           }
-                           );
+            // report any page font issues
+            for (const PdfPage::PageFont* f : fonts) { f->log_font_issues(); }
         }
     }
 
@@ -708,27 +682,19 @@ namespace pdftoedn
 
         // color list
         util::edn::Vector color_a(colors.size());
-        std::for_each( colors.begin(), colors.end(),
-                       [&](const RGBColor* c) { color_a.push( c ); }
-                       );
+        for (const RGBColor* c : colors) { color_a.push( c ); }
 
         // create and add an array for the font list
         util::edn::Vector font_a(fonts.size());
-        std::for_each( fonts.begin(), fonts.end(),
-                       [&](const PageFont* f) { font_a.push( f ); }
-                       );
+        for (const PageFont* f : fonts) { font_a.push( f ); }
 
         // image blobs
         util::edn::Hash image_h(images.size());
-        std::for_each( images.begin(), images.end(),
-                       [&](const ImageData* i) { image_h.push( i->id(), i); }
-                       );
+        for (const ImageData* i : images) { image_h.push( i->id(), i ); }
 
         // glyphs
         util::edn::Vector glyph_a(glyphs.size());
-        std::for_each( glyphs.begin(), glyphs.end(),
-                       [&](const PdfGlyph* g) { glyph_a.push( g ); }
-                       );
+        for (const PdfGlyph* g : glyphs) { glyph_a.push( g ); }
 
         // collected resources
         resource_h.push( SYMBOL_RES_COLOR_LIST,           color_a );
@@ -750,28 +716,18 @@ namespace pdftoedn
 
         // text spans, graphics, links
 
-        // an array for the text spans - note: must call to_ruby()
-        // method explicitly so the correct one is invoked as we're
-        // iterating through polymorphic types
+        // an array for the text spans
         util::edn::Vector text_a(text_spans.size());
-        std::for_each( text_spans.begin(), text_spans.end(),
-                       [&](const PdfBoxedItem* t) { text_a.push( t ); }
-                       );
+        for (const PdfBoxedItem* t : text_spans) { text_a.push(t); }
 
         // an array for the graphics with clip paths first
         util::edn::Vector gfx_a(clip_paths.size() + graphics.size());
-        std::for_each( clip_paths.begin(), clip_paths.end(),
-                       [&](const PdfDocPath *p) { gfx_a.push( p ); }
-                       );
-        std::for_each( graphics.begin(), graphics.end(),
-                       [&](const PdfGfxCmd *c) { gfx_a.push( c ); }
-                       );
+        for (const PdfDocPath* cp : clip_paths) { gfx_a.push( cp ); }
+        for (const PdfGfxCmd* g : graphics) { gfx_a.push( g ); }
 
         // an array for links
         util::edn::Vector links_a(links.size());
-        std::for_each( links.begin(), links.end(),
-                       [&](const PdfAnnotLink* l) { links_a.push( l ); }
-                       );
+        for (const PdfAnnotLink* l : links) { links_a.push( l ); }
 
         util::edn::Hash resources;
         resource_to_edn_hash(resources);
@@ -913,31 +869,30 @@ namespace pdftoedn
     }
 
     //
-    // debug info about font map errors
-    void PdfPage::PageFont::check_fonts() const
+    // debug info about Page font map errors
+    void PdfPage::PageFont::log_font_issues() const
     {
-        std::for_each( matching_doc_fonts.begin(), matching_doc_fonts.end(),
-                       [](const PdfFont* f) {
-                           if (f->is_unknown()) {
-                               // report an error
-                               std::stringstream err;
-                               err << "Failed to map font " << f->name() << " (" << f->type_str();
-                               if (f->src()->has_std_encoding()) {
-                                   err << ", " << f->src()->get_encoding()->name();
-                               }
-                               err << ")";
-                               pdftoedn::et.log_error(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, err.str());
-                           }
+        for (const PdfFont* f : matching_doc_fonts) {
+            if (f->is_unknown()) {
+                // report an error
+                std::stringstream err;
+                err << "Failed to map font " << f->name() << " (" << f->type_str();
+                if (f->src()->has_std_encoding()) {
+                    err << ", " << f->src()->get_encoding()->name();
+                }
+                err << ")";
+                pdftoedn::et.log_error(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, err.str());
+            }
 
-                           // report a warning about unmapped codes if needed
-                           if (f->has_unmapped_codes() &&
-                               ( !f->src()->has_std_encoding() || !f->has_to_unicode()) ) {
-                               // report the warning
-                               std::stringstream s;
-                               s << "Font '" << f->name() << "' has custom encoding w/ unmapped codes: " << f->get_unmapped_codes_str();
-                               et.log_warn(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, s.str());
-                           }
-                       } );
+            // report a warning about unmapped codes if needed
+            if (f->has_unmapped_codes() &&
+                ( !f->src()->has_std_encoding() || !f->has_to_unicode()) ) {
+                // report the warning
+                std::stringstream s;
+                s << "Font '" << f->name() << "' has custom encoding w/ unmapped codes: " << f->get_unmapped_codes_str();
+                et.log_warn(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, s.str());
+            }
+        }
     }
 
 } // namespace

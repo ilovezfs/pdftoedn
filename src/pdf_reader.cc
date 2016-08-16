@@ -161,6 +161,7 @@ namespace pdftoedn
         const std::set<double>& font_size_list = font_engine.get_font_size_list();
         if (!font_size_list.empty()) {
             util::edn::Vector font_size_a(font_size_list.size());
+            // use reverse iterator to get list backward
             std::for_each( font_size_list.rbegin(), font_size_list.rend(),
                            [&](const double& d) { font_size_a.push(d); }
                            );
@@ -175,14 +176,14 @@ namespace pdftoedn
             util::edn::Vector font_a(fonts.size());
 
             uintmax_t idx = 0;
-            std::for_each( fonts.begin(), fonts.end(),
-                           [&](const std::pair<const pdftoedn::PdfRef, pdftoedn::PdfFont *>& p) {
-                               util::edn::Hash font_h(2);
-                               p.second->to_edn_hash(font_h);
+            for (const FontListEntry& entry_pair : fonts) {
+                util::edn::Hash font_h(2);
 
-                               font_h.push( PdfPage::SYMBOL_FONT_IDX, idx++ );
-                               font_a.push(font_h);
-                           } );
+                entry_pair.second->to_edn_hash(font_h);
+                font_h.push( PdfPage::SYMBOL_FONT_IDX, idx++ );
+
+                font_a.push(font_h);
+            }
             meta_h.push( SYMBOL_PDF_DOC_FONTS, font_a );
         }
 

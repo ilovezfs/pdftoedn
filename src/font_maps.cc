@@ -90,13 +90,12 @@ namespace pdftoedn
         // run through the mapper list and add the ones that match
         // this font's requirements: if it uses entity codes, only add
         // entity-based maps; if it does not, only add hex maps
-        std::for_each( config_fd.mappers.begin(), config_fd.mappers.end(),
-                       [&](const EntityMap* m) {
-                           if ( (uses_entity_codes() && m->is_entity_based()) ||
-                                (!uses_entity_codes() && !m->is_entity_based()) ) {
-                               mappers.push_back(m);
-                           }
-                       } );
+        for (const EntityMap* m : config_fd.mappers) {
+            if ( (uses_entity_codes() && m->is_entity_based()) ||
+                 (!uses_entity_codes() && !m->is_entity_based()) ) {
+                mappers.push_back(m);
+            }
+        }
     }
 
     //
@@ -359,11 +358,8 @@ namespace pdftoedn
             DBG_TRACE(std::cerr << "\tsearching in std table" << std::endl);
 
             bool c2g_match = true;
-            for (std::list<FontData*>::const_iterator ii = font_maps.begin();
-                 ii != font_maps.end(); ++ii)
+            for (const FontData* fd : font_maps)
             {
-                const FontData* fd = *ii;
-
                 if (fd->map_name_cmp(lc_font_name_no_ws.c_str(), !bundled_font))
                 {
                     // TESLA-6478: we've found documents with embedded
@@ -444,13 +440,12 @@ namespace pdftoedn
         if (mapper_names.empty())
             return false;
 
-        std::for_each( mapper_names.begin(), mapper_names.end(),
-                       [&](const char* m) {
-                           GlyphMap::const_iterator jj = doc_glyph_maps.find(m);
-                           if (jj != doc_glyph_maps.end()) {
-                               mappers.push_back((jj->second));
-                           }
-                       } );
+        for (const char* m : mapper_names) {
+            GlyphMap::const_iterator jj = doc_glyph_maps.find(m);
+            if (jj != doc_glyph_maps.end()) {
+                mappers.push_back((jj->second));
+            }
+        }
         return true;
     }
 
@@ -577,12 +572,11 @@ namespace pdftoedn
     // output the list of loaded maps
     static void output_font_list(std::ostream& o, const std::list<FontData*>& fdl)
     {
-        std::for_each(fdl.begin(), fdl.end(),
-                      [&](const FontData* fd) {
-                          o << std::setw(40) << fd->font_name_pattern()
-                            << " "
-                            << fd->output_font() << std::endl;
-                      });
+        for (const FontData* fd : fdl) {
+            o << std::setw(40) << fd->font_name_pattern()
+              << " "
+              << fd->output_font() << std::endl;
+        }
     }
 
 

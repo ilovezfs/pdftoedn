@@ -104,17 +104,16 @@ namespace pdftoedn
                   case UVAL_OBJ:    o << *(val.obj);                break;
                   case UVAL_STRING:
                       o << '"';
-                      // need to escape double quotes
-                      std::for_each( val.str->begin(), val.str->end(),
-                                     [&](const char c) {
-                                         switch (c) {
-                                           case '"':
-                                           case '\\':
-                                               o << '\\';
-                                               break;
-                                         }
-                                         o << c;
-                                     } );
+                      // need to escape double quotes in the string
+                      for (char c : (*val.str)) {
+                          switch (c) {
+                            case '"':
+                            case '\\':
+                                o << '\\';
+                                break;
+                          }
+                          o << c;
+                      }
                       o << '"';
                       break;
                   default:
@@ -133,7 +132,8 @@ namespace pdftoedn
                 o << open_chars();
                 if (elems) {
                     if (elems->size() > 1) {
-                        // output each node with a space in between up to the penultimate one
+                        // output each node with a space in between up
+                        // to the penultimate one
                         std::for_each( elems->begin(), elems->end() - 1,
                                        [&](const T& n) {
                                            o << n << sep_chars();

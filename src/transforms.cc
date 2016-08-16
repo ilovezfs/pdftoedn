@@ -15,11 +15,12 @@ namespace pdftoedn
 
     //
     // output a list of transforms in EDN format
-    util::edn::Vector& Transform::list_to_edn(const std::list<Transform*>& l, util::edn::Vector& transform_a)
+    util::edn::Vector& Transform::list_to_edn(const std::list<Transform*>& transform_list,
+                                              util::edn::Vector& transform_a)
     {
-        std::for_each( l.begin(), l.end(),
-                       [&](const Transform* t) { transform_a.push(t); }
-                       );
+        for (const Transform* t : transform_list) {
+            transform_a.push( t );
+        }
         return transform_a;
     }
 

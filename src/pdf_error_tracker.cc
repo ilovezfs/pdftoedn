@@ -199,9 +199,9 @@ namespace pdftoedn
     std::ostream& ErrorTracker::to_edn(std::ostream& o) const
     {
         util::edn::Vector v(errors.size());
-        std::for_each( errors.begin(), errors.end(),
-                       [&](const error* e) { v.push( e ); }
-                       );
+        for (const error* e : errors) {
+            v.push( e );
+        }
         o << v;
         return o;
     }

@@ -119,7 +119,7 @@ namespace pdftoedn
             }
 
             bool is_equivalent_to(const PdfFont& font) const;
-            void check_fonts() const;
+            void log_font_issues() const;
 
             virtual std::ostream& to_edn(std::ostream& o) const;
 

@@ -33,6 +33,7 @@ namespace pdftoedn
     class PdfPath;
 
     typedef std::map<PdfRef, pdftoedn::PdfFont *> FontList;
+    typedef std::pair<const pdftoedn::PdfRef, pdftoedn::PdfFont *> FontListEntry;
 
     // -------------------------------------------------------
     // Our FE - handles font creation (via FT) and caching

@@ -35,18 +35,18 @@ namespace pdftoedn {
         };
 
         template< typename T >
-        void delete_ptr_container_elems(T& c) {
+        void delete_ptr_container_elems(T& container) {
             typedef typename T::value_type E;
-            std::for_each( c.begin(), c.end(), [](const E& e) { delete e; });
+            for (const E& e : container) { delete e; }
         }
         template< typename T >
         void delete_ptr_container_elems(std::list<T>& l) {
             while (!l.empty()) { delete l.back(); l.pop_back(); }
         }
         template< typename T >
-        void delete_ptr_map_elems(T& c) {
+        void delete_ptr_map_elems(T& map) {
             typedef typename T::value_type E;
-            std::for_each( c.begin(), c.end(), [](const E& e) { delete e.second; });
+            for (const E& map_pair : map) { delete map_pair.second; }
         }
 
         //
