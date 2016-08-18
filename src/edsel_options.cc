@@ -21,34 +21,38 @@ namespace pdftoedn {
 
     //
     // constructor
-    Options::Options(const std::string& filename, const std::string& fontmap, const std::string& out_filename,
-                     const Flags& f, intmax_t pg_num) :
-        file_name(filename), output_file(out_filename), flags(f), page_num(pg_num)
+    Options::Options(const std::string& pdf_filename,
+                     const std::string& edn_filename,
+                     const std::string& fontmap,
+                     const Flags& f,
+                     intmax_t pg_num) :
+        src_pdf_filename(pdf_filename), out_edn_filename(edn_filename), flags(f), page_num(pg_num)
     {
         namespace fs = boost::filesystem;
-        fs::path file_path(filename);
+        fs::path file_path = src_pdf_filename;
 
         // check input file
         if (util::fs::check_valid_input_file(file_path)) // throws if error
         {
             // check that it looks like a PDF by looking at the header
             // (first 8 bytes. e.g.: "%PDF-1.3")
-            fs::ifstream f(filename);
+            fs::ifstream f(src_pdf_filename);
             char buf[9] = { 0 };
             f.read(buf, 8);
             f.close();
             buf[8] = 0;
 
             boost::cmatch what;
-            if (!boost::regex_match(buf, what, boost::regex("%PDF\\-[1-9]\\.[0-9]"), boost::match_default)) {
+            if (!boost::regex_match(buf, what, boost::regex("%PDF\\-[1-9]\\.[0-9]"),
+                                    boost::match_default)) {
                 std::stringstream ss;
-                ss << file_name << " does not look like a valid PDF";
+                ss << src_pdf_filename << " does not look like a valid PDF";
                 throw invalid_file(ss.str());
             }
         }
 
         // check the destination
-        fs::path output_filepath(out_filename);
+        fs::path output_filepath = out_edn_filename;
         fs::path parent_path(output_filepath.parent_path());
 
         // output file path is required and will have to be created so
@@ -194,24 +198,24 @@ namespace pdftoedn {
     std::ostream& operator<<(std::ostream& o, const Options& opt)
     {
         o << "+- Options -+" << std::endl
-          << "   Input file:        " << opt.file_name << std::endl
-          << "   Doc base name:     " << opt.doc_base_name << std::endl
-          << "   Output file:       " << opt.output_file << std::endl;
+          << "   Input PDF file:    \"" << opt.src_pdf_filename << '"' << std::endl
+          << "   Output file:       \"" << opt.out_edn_filename << '"' << std::endl
+          << "   Out base name:     \"" << opt.doc_base_name << '"' << std::endl;
         if (!opt.output_path.empty()) {
-            o << "   Output root path:  " << opt.output_path << boost::filesystem::path::preferred_separator << std::endl;
+            o << "   Output root path:  \"" << opt.output_path << boost::filesystem::path::preferred_separator << '"' << std::endl;
         }
-        o << "   Resource path:     " << opt.resource_dir << boost::filesystem::path::preferred_separator << std::endl;
+        o << "   Resource path:     \"" << opt.resource_dir << boost::filesystem::path::preferred_separator << '"' << std::endl;
 
         {
             // image path test
             std::string test;
             opt.get_image_path(1, test, false);
-            o << "   Image output test: " << test << std::endl
-              << "   Relative img test: " << opt.get_image_rel_path(test) << std::endl;
+            o << "   Image output test: \"" << test << '"' << std::endl
+              << "   Relative img test: \"" << opt.get_image_rel_path(test) << '"' << std::endl;
         }
 
         if (!opt.font_map.empty()) {
-            o << "   Font map file:     " << opt.font_map << std::endl;
+            o << "   Font map file:     \"" << opt.font_map << '"' << std::endl;
         }
 
         if (opt.page_num != -1) {

@@ -41,7 +41,7 @@ namespace pdftoedn
     // font engine fails to init freetype (from FE constructor) or if
     // poppler fails to open the file
     PDFReader::PDFReader() :
-        PDFDoc(new GooString(pdftoedn::options.filename().c_str()), NULL, NULL),
+        PDFDoc(new GooString(pdftoedn::options.pdf_filename().c_str()), NULL, NULL),
         font_engine(getXRef()),
         eng_odev(NULL),
         use_page_media_box(true)
@@ -139,7 +139,7 @@ namespace pdftoedn
         util::edn::Hash meta_h(14);
 
         meta_h.push( util::version::SYMBOL_DATA_FORMAT_VERSION, util::version::data_format_version() );
-        meta_h.push( SYMBOL_PDF_FILENAME                      , pdftoedn::options.filename() );
+        meta_h.push( SYMBOL_PDF_FILENAME                      , pdftoedn::options.pdf_filename() );
         meta_h.push( SYMBOL_PDF_DOC_OK                        , true );
         meta_h.push( SYMBOL_FONT_ENG_OK                       , true );
 

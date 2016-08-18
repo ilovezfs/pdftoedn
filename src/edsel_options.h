@@ -21,12 +21,12 @@ namespace pdftoedn {
         };
 
         Options() : page_num(-1) {}
-        Options(const std::string& filename, const std::string& font_map, const std::string& out_filename,
+        Options(const std::string& pdf_filename, const std::string& edn_filename, const std::string& font_map,
                 const Flags& f, intmax_t pg_num);
 
-        const std::string& filename() const      { return file_name; }
+        const std::string& pdf_filename() const  { return src_pdf_filename; }
+        const std::string& edn_filename() const  { return out_edn_filename; }
         const std::string& outputdir() const     { return output_path; }
-        const std::string& outputfile() const    { return output_file; }
         intmax_t page_number() const             { return page_num; }
 
         bool get_image_path(intmax_t id, std::string& abs_file_path, bool create_res_dir = true) const;
@@ -45,9 +45,9 @@ namespace pdftoedn {
         friend std::ostream& operator<<(std::ostream& o, const Options& opt);
 
     private:
-        std::string file_name;
+        std::string src_pdf_filename;
+        std::string out_edn_filename;
         std::string font_map;
-        std::string output_file;
         Flags flags;
         intmax_t page_num;
         std::string output_path;

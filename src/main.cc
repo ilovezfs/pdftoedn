@@ -18,6 +18,7 @@
 #include "edsel_options.h"
 #include "font_maps.h"
 #include "util_edn.h"
+#include "util_fs.h"
 #include "util_xform.h"
 #include "util_versions.h"
 
@@ -46,7 +47,7 @@ int main(int argc, char** argv)
 
     // parse the options
     pdftoedn::Options::Flags flags = { false };
-    std::string filename, output_file, font_map_file;
+    std::string pdf_filename, edn_output_filename, font_map_file;
     bool show_font_list = false;
     intmax_t page_number = -1;
 
@@ -55,7 +56,7 @@ int main(int argc, char** argv)
         namespace po = boost::program_options;
         po::options_description opts("Options");
         opts.add_options()
-            ("output_file,o",       po::value<std::string>(&output_file)->required(),
+            ("output_file,o",       po::value<std::string>(&edn_output_filename)->required(),
              "REQUIRED: Destination file path to write output to.")
             ("use_page_crop_box,a", po::bool_switch(&flags.use_page_crop_box),
              "Use page crop box instead of media box when reading page content.")
@@ -73,7 +74,7 @@ int main(int argc, char** argv)
              "Don't extract outline data.")
             ("page_number,p",       po::value<intmax_t>(&page_number),
              "Extract data for only this page.")
-            ("filename",            po::value<std::string>(&filename)->required(),
+            ("filename",            po::value<std::string>(&pdf_filename)->required(),
              "PDF document to process.")
             ("show_font_map_list,F",po::bool_switch(&show_font_list),
              "Display the configured font substitution list and exit.")
@@ -131,7 +132,15 @@ int main(int argc, char** argv)
     // try to set the options - this checks that files exist, etc.
     try
     {
-        pdftoedn::options = pdftoedn::Options(filename, font_map_file, output_file, flags, (page_number >= 0 ? page_number : -1));
+        // expand the paths if they start with ~
+        pdftoedn::util::fs::expand_path(pdf_filename);
+        pdftoedn::util::fs::expand_path(edn_output_filename);
+
+        pdftoedn::options = pdftoedn::Options(pdf_filename,
+                                              edn_output_filename,
+                                              font_map_file,
+                                              flags,
+                                              (page_number >= 0 ? page_number : -1));
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -163,11 +172,11 @@ int main(int argc, char** argv)
         pdftoedn::PDFReader doc_reader;
 
         std::ofstream output;
-        output.open(pdftoedn::options.outputfile().c_str());
+        output.open(pdftoedn::options.edn_filename().c_str());
 
         if (!output.is_open()) {
             std::stringstream ss;
-            ss << pdftoedn::options.outputfile() << "Cannot open file for write";
+            ss << pdftoedn::options.edn_filename() << "Cannot open file for write";
             throw pdftoedn::invalid_file(ss.str());
         }
 

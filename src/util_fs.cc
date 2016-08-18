@@ -12,6 +12,8 @@
 #pragma clang diagnostic pop
 #endif
 
+#include <wordexp.h>
+
 #include "util_fs.h"
 #include "pdf_error_tracker.h"
 
@@ -42,6 +44,29 @@ namespace pdftoedn
 
 
             //
+            // if path starts with ~, expand it
+            void expand_path(std::string& path)
+            {
+                if (path.find("~") == 0) {
+                    wordexp_t exp_result;
+                    std::string exp_rslt;
+
+                    if (wordexp(path.c_str(), &exp_result, WRDE_SHOWERR) == 0) {
+                        for (intmax_t ii = 0; ii < exp_result.we_wordc; ++ii) {
+                            if (ii != 0) {
+                                exp_rslt += ' ';
+                            }
+                            exp_rslt += exp_result.we_wordv[ii];
+                        }
+                        wordfree(&exp_result);
+                        path = exp_rslt;
+                    } else {
+                        throw invalid_file("error expanding path");
+                    }
+                }
+            }
+
+            //
             // check for valid input files
             bool check_valid_input_file(const boost::filesystem::path& infile)
             {
@@ -63,54 +88,6 @@ namespace pdftoedn
             }
 
 
-            bool directory_files(const std::string& dir, std::set<std::string>& file_list,
-                                 const std::string& ext)
-            {
-                namespace fs = boost::filesystem;
-
-                const fs::path& dir_path(dir);
-                if (!exists(dir_path)) {
-                    return false;
-                }
-
-                fs::directory_iterator end_itr; // default construction yields past-the-end
-                std::string file;
-                const uint32_t ext_len = ext.length();
-
-                for ( fs::directory_iterator itr( dir_path );
-                      itr != end_itr;
-                      ++itr )
-                {
-                    // skip directories
-                    if ( is_directory(itr->status()) ) {
-                        continue;
-                    }
-
-                    bool match = true;
-                    file = itr->path().filename().string();
-
-                    // if there's an extension to match, check against it
-                    if (ext_len > 0) {
-                        uint32_t file_len = file.length();
-                        if (file_len <= ext_len) {
-                            continue;
-                        }
-                        uint32_t ii = ext_len;
-                        while (ii) {
-                            if (file[--file_len] != ext[--ii]) {
-                                match = false;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (match) {
-                        file_list.insert(file);
-                    }
-                }
-                return true;
-            }
-
             //
             // write image blob to disk
             bool write_image_to_disk(const std::string& filename, const std::string& blob,
@@ -123,10 +100,12 @@ namespace pdftoedn
                     std::ofstream file;
                     file.open(filename.c_str());
 
-                    if (file.is_open()) {
-                        file << blob;
-                        file.close();
+                    if (!file.is_open()) {
+                        return false;
                     }
+
+                    file << blob;
+                    file.close();
                 }
                 return true;
             }
