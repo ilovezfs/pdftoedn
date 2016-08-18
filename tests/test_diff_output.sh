@@ -25,6 +25,12 @@ do
         ARGS="$ARGS -m "$FONTMAP""
     fi
 
+    # enc_test.pdf is encrypted so pass the password using -u
+    if [ "${SRCPDF#*enc_test.pdf}" != "$SRCPDF" ]; then
+        # encrypted test - "enc_test.pdf" is the password
+        ARGS="$ARGS -u enc_test.pdf"
+    fi
+
     # process the PDF
     run_cmd "$PDFTOEDN $ARGS -o "$TMPFILE" "$SRCPDF""
     status=$?
@@ -36,14 +42,13 @@ do
 
     # remove the filename string and version strings hash so it
     # doesn't cause diff output on version bumps
-    filter_meta $TMPFILE t1.tmp
-    filter_meta $REFEDN t2.tmp
+    filter_meta "$TMPFILE" t1.tmp
 
     # diff them
-    $DIFF t1.tmp t2.tmp &> /dev/null
+    $DIFF t1.tmp "$REFEDN" &> /dev/null
     status=$?
 
-    $RM t1.tmp t2.tmp
+    $RM t1.tmp
     if [ $status -ne 0 ]; then
         echo " -> File output did not match reference output"
     fi

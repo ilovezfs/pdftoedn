@@ -47,11 +47,15 @@ namespace pdftoedn {
     // constructor
     //
     Options::Options(const std::string& pdf_filename,
+                     const std::string& pdf_owner_password,
+                     const std::string& pdf_user_password,
                      const std::string& edn_filename,
                      const std::string& fontmap,
                      const Flags& f,
                      intmax_t pg_num) :
-        src_pdf_filename(pdf_filename), out_edn_filename(edn_filename), flags(f), page_num(pg_num)
+        src_pdf_filename(pdf_filename),
+        src_pdf_owner_password(pdf_owner_password), src_pdf_user_password(pdf_user_password),
+        out_edn_filename(edn_filename), flags(f), page_num(pg_num)
     {
         namespace fs = boost::filesystem;
         fs::path file_path = src_pdf_filename;

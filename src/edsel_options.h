@@ -21,13 +21,21 @@ namespace pdftoedn {
         };
 
         Options() : page_num(-1) {}
-        Options(const std::string& pdf_filename, const std::string& edn_filename, const std::string& font_map,
-                const Flags& f, intmax_t pg_num);
+        Options(const std::string& pdf_filename,
+                const std::string& pdf_owner_password,
+                const std::string& pdf_user_password,
+                const std::string& edn_filename,
+                const std::string& font_map,
+                const Flags& f,
+                intmax_t pg_num);
 
         const std::string& pdf_filename() const  { return src_pdf_filename; }
         const std::string& edn_filename() const  { return out_edn_filename; }
         const std::string& outputdir() const     { return output_path; }
         intmax_t page_number() const             { return page_num; }
+
+        const std::string& pdf_owner_password() const { return src_pdf_owner_password; }
+        const std::string& pdf_user_password() const  { return src_pdf_user_password; }
 
         bool get_image_path(intmax_t id, std::string& abs_file_path, bool create_res_dir = true) const;
         std::string get_image_rel_path(const std::string& abs_path) const;
@@ -46,6 +54,8 @@ namespace pdftoedn {
 
     private:
         std::string src_pdf_filename;
+        std::string src_pdf_owner_password;
+        std::string src_pdf_user_password;
         std::string out_edn_filename;
         std::string font_map;
         Flags flags;

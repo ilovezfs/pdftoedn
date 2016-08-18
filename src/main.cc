@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 
     // parse the options
     pdftoedn::Options::Flags flags = { false };
-    std::string pdf_filename, edn_output_filename, font_map_file;
+    std::string pdf_filename, pdf_owner_password, pdf_user_password, edn_output_filename, font_map_file;
     bool show_font_list = false;
     intmax_t page_number = -1;
 
@@ -62,6 +62,8 @@ int main(int argc, char** argv)
              "Use page crop box instead of media box when reading page content.")
             ("debug_meta,D",        po::bool_switch(&flags.include_debug_info),
              "Include additional debug metadata in output.")
+            ("show_font_map_list,F",po::bool_switch(&show_font_list),
+             "Display the configured font substitution list and exit.")
             ("force_output,f"  ,    po::bool_switch(&flags.force_output_write),
              "Overwrite output file if it exists.")
             ("invisible_text,i",    po::bool_switch(&flags.include_invisible_text),
@@ -74,10 +76,12 @@ int main(int argc, char** argv)
              "Don't extract outline data.")
             ("page_number,p",       po::value<intmax_t>(&page_number),
              "Extract data for only this page.")
+            ("owner_password,t",    po::value<std::string>(&pdf_owner_password),
+             "PDF owner password if document is encrypted.")
+            ("user_password,u",     po::value<std::string>(&pdf_user_password),
+             "PDF user password if document is encrypted.")
             ("filename",            po::value<std::string>(&pdf_filename)->required(),
              "PDF document to process.")
-            ("show_font_map_list,F",po::bool_switch(&show_font_list),
-             "Display the configured font substitution list and exit.")
             ("version,v",
              "Display version information and exit.")
             ("help,h",
@@ -137,6 +141,8 @@ int main(int argc, char** argv)
         pdftoedn::util::fs::expand_path(edn_output_filename);
 
         pdftoedn::options = pdftoedn::Options(pdf_filename,
+                                              pdf_owner_password,
+                                              pdf_user_password,
                                               edn_output_filename,
                                               font_map_file,
                                               flags,

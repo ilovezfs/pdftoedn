@@ -3,6 +3,7 @@
 TMPFILE=file.tmp
 STDOUTFILE=out.tmp
 TESTDOC=${TESTS_DIR}/docs/HUN.pdf
+TEST_ENCDOC=${TESTS_DIR}/docs/enc_test.pdf
 
 DIFF="diff"
 RM="rm -f"
@@ -37,7 +38,7 @@ test_start () {
 filter_meta () {
     local SRC="$1"
     local DST="$2"
-    cat "$SRC" | sed 's/:versions {.*}/:versions {}/' | sed 's/:filename ".*"/:filename ""/' > "$DST"
+    cat "$SRC" | sed 's/:versions {[a-z0-9:\ \.,"]*}/:versions {}/' | sed 's/:filename "[a-zA-Z0-9/\_\.\-]*"/:filename ""/' > "$DST"
 }
 
 # output and execute the command

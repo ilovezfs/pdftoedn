@@ -11,7 +11,7 @@ namespace pdftoedn
     namespace util
     {
         namespace debug {
-            const char* get_poppler_doc_error_str(int errCode);
+            std::string get_poppler_doc_error_str(int errCode);
             const char* get_poppler_error_str(ErrorCategory e);
             const char* get_stream_kind_str(StreamKind sk);
             const char* get_font_type_str(FontSource::FontType type);

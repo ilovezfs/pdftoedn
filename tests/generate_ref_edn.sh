@@ -22,10 +22,19 @@ for file in ${TESTS_DIR}/docs/*.edn.bz2; do
         ARGS="$ARGS -m "$FONTMAP""
     fi
 
+    if [ "${SRCPDF#*enc_test.pdf}" != "$SRCPDF" ]; then
+        # encrypted test - yes "enc_test.pdf" is the password
+        ARGS="$ARGS -u enc_test.pdf"
+    fi
+
     # process EDN
     run_cmd "${PDFTOEDN} $ARGS -o "$REFEDN" "$SRCPDF""
+    status=$?
 
-    if [ $? -eq 0 ]; then
+    filter_meta "$REFEDN" edn.tmp
+    mv edn.tmp "$REFEDN"
+
+    if [ $status -eq 0 ]; then
         # compress ouptut
         bzip2 -f "$REFEDN"
         [ $? -eq 0 ] && echo "Compressed $REFEDN"

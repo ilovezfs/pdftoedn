@@ -25,7 +25,7 @@ namespace pdftoedn
 
             //
             // error types
-            const char* get_poppler_doc_error_str(int errCode)
+            std::string get_poppler_doc_error_str(int errCode)
             {
                 // see poppler/ErrorCodes.h
                 switch (errCode) {
@@ -36,7 +36,7 @@ namespace pdftoedn
                   case errBadCatalog:
                       return "couldn't read the page catalog"; break;
                   case errDamaged:
-                      return "PDF file was damaged and couldn't be repaired"; break;
+                      return "document does not look like a valid PDF"; break;
                   case errEncrypted:
                       return "file was encrypted and password was incorrect or not supplied"; break;
                   case errHighlightFile:
@@ -51,10 +51,12 @@ namespace pdftoedn
                       return "invalid page number"; break;
                   case errFileIO:
                       return "file I/O error"; break;
-                  default:
-                      return "Unknown error";
+                  default: break;
                 }
-                return NULL;
+
+                std::stringstream str;
+                str << "Unknown error code: " << errCode;
+                return str.str();
             }
 
             const char* get_poppler_error_str(ErrorCategory e)

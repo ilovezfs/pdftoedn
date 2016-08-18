@@ -53,7 +53,7 @@ namespace pdftoedn
         void outline_link_dest(LinkDest* dest, PdfOutline::Entry& entry);
         uintmax_t get_link_page_num(LinkDest* link);
 
-        void processPage(::OutputDev* dev, uintmax_t page);
+        void process_page(::OutputDev* dev, uintmax_t page);
 
         // returns document metadata
         std::ostream& output_meta(std::ostream& o);
