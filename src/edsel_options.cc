@@ -1,8 +1,11 @@
 #include <iostream>
 #include <string>
 #include <ostream>
-#include <boost/regex.hpp>
 #include <boost/filesystem.hpp>
+
+#ifdef CHECK_PDF_COOKIE
+#include <boost/regex.hpp>
+#endif
 
 #include "edsel_options.h"
 #include "util.h"
@@ -19,8 +22,30 @@ namespace pdftoedn {
 
     static const std::string DEFAULT_CONFIG_DIR = util::expand_environment_variables("${HOME}") + "/.pdftoedn/";
 
+#ifdef CHECK_PDF_COOKIE
     //
+    // poppler checks this too so this is not enabled by default to
+    // avoid opening the file twice (note: poppler's error is
+    // something like "PDF file was damaged and couldn't be repaired")
+    static bool check_pdf_cookie(const std::string& pdf_filename)
+    {
+        // check that it looks like a PDF by looking at the header
+        // (first 8 bytes. e.g.: "%PDF-1.3")
+        fs::ifstream f(pdf_filename);
+        char buf[9] = { 0 };
+        f.read(buf, 8);
+        f.close();
+        buf[8] = 0;
+
+        boost::cmatch what;
+        return boost::regex_match(buf, what, boost::regex("%PDF\\-[1-9]\\.[0-9]"),
+                                  boost::match_default);
+    }
+#endif
+
+    // ======================================================================
     // constructor
+    //
     Options::Options(const std::string& pdf_filename,
                      const std::string& edn_filename,
                      const std::string& fontmap,
@@ -32,23 +57,14 @@ namespace pdftoedn {
         fs::path file_path = src_pdf_filename;
 
         // check input file
-        if (util::fs::check_valid_input_file(file_path)) // throws if error
-        {
-            // check that it looks like a PDF by looking at the header
-            // (first 8 bytes. e.g.: "%PDF-1.3")
-            fs::ifstream f(src_pdf_filename);
-            char buf[9] = { 0 };
-            f.read(buf, 8);
-            f.close();
-            buf[8] = 0;
-
-            boost::cmatch what;
-            if (!boost::regex_match(buf, what, boost::regex("%PDF\\-[1-9]\\.[0-9]"),
-                                    boost::match_default)) {
+        if (util::fs::check_valid_input_file(file_path)) {
+#ifdef CHECK_PDF_COOKIE
+            if (!check_pdf_cookie(src_pdf_filename)) {
                 std::stringstream ss;
                 ss << src_pdf_filename << " does not look like a valid PDF";
                 throw invalid_file(ss.str());
             }
+#endif
         }
 
         // check the destination
@@ -185,6 +201,7 @@ namespace pdftoedn {
         return true;
     }
 
+
     //
     // extract the relative path of the image combining the resource
     // directory name and image name
@@ -192,6 +209,7 @@ namespace pdftoedn {
         boost::filesystem::path abs_path(image_abs_file_name);
         return (abs_path.parent_path().filename() / abs_path.filename()).string();
     }
+
 
     //
     // info output

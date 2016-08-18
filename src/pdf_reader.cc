@@ -48,7 +48,8 @@ namespace pdftoedn
     {
         if (!isOk()) {
             std::stringstream ss;
-            ss << util::debug::get_poppler_doc_error_str(getErrorCode());
+            ss << "Document open error: "
+               << util::debug::get_poppler_doc_error_str(getErrorCode());
             throw invalid_file(ss.str());
         }
 
