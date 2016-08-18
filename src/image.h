@@ -79,14 +79,28 @@ namespace pdftoedn
             upside_down(img_upside_down)
         { }
 
-        // mask query ops
+        // query methods
         bool is_inlined() const { return inlined; }
-        bool is_inverted() const { return mask.invert; }
+        bool mask_is_inverted() const { return mask.invert; }
         const RGBColor& mask_fill_color() const { return mask.fill; }
+
+        uintmax_t mask_width() const { return mask.width; }
+        uintmax_t mask_height() const { return mask.height; }
+        uintmax_t bitmap_width() const { return bitmap.width; }
+        uintmax_t bitmap_height() const { return bitmap.height; }
+
+        uint8_t mask_num_pixel_comps() const { return mask.num_pixel_comps; }
+        uint8_t bitmap_num_pixel_comps() const { return bitmap.num_pixel_comps; }
+
+        uint8_t mask_bpp() const { return mask.bits_per_pixel; }
+        uint8_t bitmap_bpp() const { return bitmap.bits_per_pixel; }
 
         virtual std::ostream& to_edn(std::ostream& o) const;
 
     private:
+        // streams in a PDF can be straight bitmaps, mask, or masked
+        // bitmaps. This carries properties for both in case it's
+        // needed
         struct BitmapAttribs {
             BitmapAttribs() : stream_type(STREAM_UNDEF) { }
             BitmapAttribs(stream_type_e str_type, uint32_t w, uint32_t h,
@@ -102,6 +116,7 @@ namespace pdftoedn
             uint8_t bits_per_pixel;
             bool interpolate;
         };
+
         struct MaskAttribs {
             MaskAttribs() : stream_type(STREAM_UNDEF), interpolate(false), invert(false) { }
             MaskAttribs(stream_type_e str_type, uintmax_t w, uintmax_t h,

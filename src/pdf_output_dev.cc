@@ -467,27 +467,20 @@ namespace pdftoedn
             GfxRGB fill;
             state->getFillRGB(&fill);
 
-            DBG_TRACE_IMG( std::cerr << " - stream kind: '" << util::debug::get_stream_kind_str(str->getKind())
-                                     << "', w: " << width << ", h: " << height << std::endl
-                                     << std::boolalpha << "\tinterpol: " << interpolate
-                                     << ", inline: " << inlined
-                                     << ", inv: " << invert << std::endl
-                                     << "\tctm: " << std::endl << PdfTM(state->getCTM()) << std::endl
-                                     << "\tfill: ("
-                                     << (int) colToByte(fill.r) << ", " << (int) colToByte(fill.g) << ", " << (int) colToByte(fill.b)
-                                     << "), cs: " << GfxColorSpace::getColorSpaceModeName(state->getFillColorSpace()->getMode()) << std::endl);
-
             // set up stream properties
             StreamProps properties(util::poppler_stream_type_to_edsel(str->getKind()),
                                    width, height,
                                    fill, state->getFillColorSpace()->getMode(),
                                    interpolate, ctm.is_upside_down(), inlined, invert);
 
-            // extract the data and copy it to a string stream
-            std::ostringstream blob, xformed_blob;
-            uint8_t transformed = util::xform::XFORM_NONE;
+            DBG_TRACE_IMG( std::cerr << __FUNCTION__ << std::endl
+                                     << properties << std::endl
+                                     << "\tctm: " << std::endl << PdfTM(state->getCTM())
+                                     << std::endl; );
 
-            bool encode_status = util::encode::encode_mask(blob, imgStr, width, height, properties);
+            // extract the data and copy it to a string stream
+            std::ostringstream blob;
+            bool encode_status = util::encode::encode_mask(blob, imgStr, properties);
 
             // poppler cleanup
             delete imgStr;
@@ -499,6 +492,8 @@ namespace pdftoedn
             }
 
             // handle transformations if needed
+            uint8_t transformed = util::xform::XFORM_NONE;
+            std::ostringstream xformed_blob;
             if (ctm.is_transformed()) {
                 // use leptonica to transform the image
                 transformed = util::xform::transform_image(ctm, blob.str(), width, height, invert, xformed_blob);
@@ -553,19 +548,6 @@ namespace pdftoedn
             return;
         }
 
-
-        DBG_TRACE_IMG(std::cerr << __FUNCTION__ << std::dec << std::endl
-                               << "    img w: " << width << ", h: " << height << std::endl
-                               << "           c-space: " << GfxColorSpace::getColorSpaceModeName(colorMap->getColorSpace()->getMode())
-                               << ", num pix comp: " << colorMap->getNumPixelComps()
-                               << ", bpp: " << colorMap->getBits()
-                               << std::endl
-                               << "    mask w: " << maskWidth << ", h: " << maskHeight << std::endl
-                               << "      mask c-space: " << GfxColorSpace::getColorSpaceModeName(maskColorMap->getColorSpace()->getMode())
-                               << ", num pix comp: " << maskColorMap->getNumPixelComps()
-                               << ", bpp: " << maskColorMap->getBits()
-                               << std::endl);
-
         // check matrix is valid
         PdfTM ctm(state->getCTM());
         if (!ctm.is_finite()) {
@@ -589,6 +571,12 @@ namespace pdftoedn
                                    maskColorMap->getNumPixelComps(), maskColorMap->getBits(), maskInterpolate,
                                    ctm.is_upside_down());
 
+            DBG_TRACE_IMG(std::cerr << __FUNCTION__ << std::endl
+                                    << properties << std::endl
+                                    << "           c-space: " << GfxColorSpace::getColorSpaceModeName(colorMap->getColorSpace()->getMode())
+                                    << "      mask c-space: " << GfxColorSpace::getColorSpaceModeName(maskColorMap->getColorSpace()->getMode())
+                                    << std::endl);
+
             // poppler's interface to rip through a stream for an image
             ImageStream *imgStr = new ImageStream(str, width, num_pix_comps, bpp);
             ImageStream *maskImgStr = new ImageStream(maskStr, maskWidth,
@@ -596,15 +584,15 @@ namespace pdftoedn
                                                       maskColorMap->getBits());
 
             // image data will be written here
-            std::ostringstream blob, xformed_blob;
-            uint8_t transformed = util::xform::XFORM_NONE;
-
-            bool encode_status = util::encode::encode_rgba_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap,
-                                                                 maskImgStr, maskWidth, maskHeight, maskColorMap->getNumPixelComps(), maskColorMap->getBits(), maskColorMap,
+            std::ostringstream blob;
+            bool encode_status = util::encode::encode_rgba_image(blob, imgStr, maskImgStr,
+                                                                 properties,
+                                                                 colorMap, maskColorMap,
                                                                  false);
             // poppler cleanup
             delete maskImgStr;
             delete imgStr;
+            maskStr->close();
             str->close();
 
             // don't continue if encode failed
@@ -613,6 +601,8 @@ namespace pdftoedn
             }
 
             // handle transformations if needed
+            uint8_t transformed = util::xform::XFORM_NONE;
+            std::ostringstream xformed_blob;
             if (ctm.is_transformed()) {
                 transformed = util::xform::transform_image(ctm, blob.str(), width, height, false, xformed_blob);
             }
@@ -688,13 +678,9 @@ namespace pdftoedn
                                    util::poppler_stream_type_to_edsel(maskStr->getKind()), maskWidth, maskHeight,
                                    ctm.is_upside_down(), maskInterpolate, maskInvert);
 
-            DBG_TRACE_IMG(std::cerr << std::dec
-                                    << "\timg w: " << width << ", h: " << height
+            DBG_TRACE_IMG(std::cerr << __FUNCTION__ << std::endl
+                                    << properties << std::endl
                                     << ", cspace: " << GfxColorSpace::getColorSpaceModeName(colorMap->getColorSpace()->getMode())
-                                    << ", pix_comps: " << num_pix_comps << ", bpp: " << bpp
-                                    << ", interpolate: " << interpolate << std::endl
-                                    << "\tmask w: " << maskWidth << ", h: " << maskHeight
-                                    << ", mask invert: " << maskInvert << ", mask interpolate: " << maskInterpolate
                                     << std::endl);
 
             // poppler's interface to rip through a stream for an image
@@ -702,16 +688,16 @@ namespace pdftoedn
             ImageStream *maskImgStr = new ImageStream(maskStr, maskWidth, 1, 1);
 
             // image data will be written here
-            std::ostringstream blob, xformed_blob;
-            uint8_t transformed = util::xform::XFORM_NONE;
-
-            bool encode_status = util::encode::encode_rgba_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap,
-                                                                 maskImgStr, maskWidth, maskHeight, 1, 1, NULL,
+            std::ostringstream blob;
+            bool encode_status = util::encode::encode_rgba_image(blob, imgStr, maskImgStr,
+                                                                 properties,
+                                                                 colorMap, NULL,
                                                                  maskInvert);
 
             // poppler cleanup
             delete maskImgStr;
             delete imgStr;
+            maskStr->close();
             str->close();
 
             // don't continue if encode failed
@@ -720,6 +706,8 @@ namespace pdftoedn
             }
 
             // handle transformations if needed
+            uint8_t transformed = util::xform::XFORM_NONE;
+            std::ostringstream xformed_blob;
             if (ctm.is_transformed()) {
                 transformed = util::xform::transform_image(ctm, blob.str(), width, height, maskInvert, xformed_blob);
             }
@@ -748,15 +736,6 @@ namespace pdftoedn
         if (state->getFillColorSpace()->isNonMarking()) {
             return;
         }
-
-        DBG_TRACE_IMG(std::cerr << __FUNCTION__
-                                << " - stream kind: " << util::debug::get_stream_kind_str(str->getKind())
-                                << " w: " << width << ", h: " << height
-                                << std::boolalpha << ", interpol: " << interpolate
-                                << ", inline: " << inlined << ", mask colors? " << (maskColors != NULL)
-                                << std::endl
-                                << " ctm: " << std::endl << PdfTM(state->getCTM())
-                                << std::endl);
 
         // check matrix is valid
         PdfTM ctm(state->getCTM());
@@ -794,14 +773,18 @@ namespace pdftoedn
                                    width, height, num_pix_comps, bpp,
                                    interpolate, ctm.is_upside_down(), inlined);
 
+            DBG_TRACE_IMG(std::cerr << __FUNCTION__ << std::endl
+                                    << properties << std::endl
+                                    << "mask colors? " << (maskColors != NULL) << std::endl
+                                    << " ctm: " << std::endl << PdfTM(state->getCTM())
+                                    << std::endl);
+
             // poppler's interface to rip through a stream for an image
             ImageStream *imgStr = new ImageStream(str, width, num_pix_comps, bpp);
 
             // image data will be written here
-            std::ostringstream blob, xformed_blob;
-            uint8_t transformed = util::xform::XFORM_NONE;
-
-            bool encode_status = util::encode::encode_image(blob, imgStr, width, height, num_pix_comps, bpp, colorMap);
+            std::ostringstream blob;
+            bool encode_status = util::encode::encode_image(blob, imgStr, properties, colorMap);
 
             // poppler cleanup
             delete imgStr;
@@ -812,6 +795,8 @@ namespace pdftoedn
             }
 
             // handle transformations if needed
+            uint8_t transformed = util::xform::XFORM_NONE;
+            std::ostringstream xformed_blob;
             if (ctm.is_transformed()) {
                 transformed = util::xform::transform_image(ctm, blob.str(), width, height, false, xformed_blob);
                 //                std::cerr << "image transformed. adjusted bbox:" << std::endl << bbox << std::endl;

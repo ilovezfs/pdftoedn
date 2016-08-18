@@ -172,7 +172,13 @@ namespace pdftoedn
         }
 
         // add it to the list
-        errors.push_back( new error(e, l, module, msg) );
+        error* err = new error(e, l, module, msg);
+        errors.push_back( err );
+
+        // stderr if it's critical
+        if (l == error::L_CRITICAL) {
+            std::cerr << "Critical error: " << *err << std::endl;
+        }
     }
 
     //
@@ -216,7 +222,7 @@ namespace pdftoedn
             return;
         }
 
-        ErrorTracker* et = static_cast<ErrorTracker*>(data);
+        ErrorTracker* et = reinterpret_cast<ErrorTracker*>(data);
 
         if (et)
         {

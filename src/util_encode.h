@@ -9,20 +9,15 @@ namespace pdftoedn
     {
         namespace encode {
 
-            bool encode_image(std::ostream& output, ImageStream* img_str,
-                              uint32_t width, uint32_t height, uint32_t num_pix_comps, uint8_t bpp,
+            bool encode_image(std::ostream& output, ImageStream* img_str, const StreamProps& properties,
                               GfxImageColorMap *colorMap);
-            bool encode_rgba_image(std::ostream& output,
-                                   ImageStream* img_str, uint32_t width, uint32_t height,
-                                   uint32_t num_pix_comps, uint8_t bpp, GfxImageColorMap *color_map,
-                                   ImageStream* mask_str, uint32_t mask_width, uint32_t mask_height,
-                                   uint32_t mask_num_pix_comps, uint8_t mask_bpp, GfxImageColorMap *mask_color_map,
+            bool encode_rgba_image(std::ostream& output, ImageStream* img_str, ImageStream* mask_str,
+                                   const StreamProps& properties,
+                                   GfxImageColorMap *color_map, GfxImageColorMap *mask_color_map,
                                    bool mask_invert);
-            bool encode_mask(std::ostream& output, ImageStream* img_str, uint32_t width, uint32_t height,
-                             const StreamProps& properties);
+            bool encode_mask(std::ostream& output, ImageStream* img_str, const StreamProps& properties);
 #if 0
-            bool encode_grey_image(std::ostream& output, ImageStream* img_str,
-                                   uint32_t width, uint32_t height, uint32_t num_pix_comps, uint8_t bpp,
+            bool encode_grey_image(std::ostream& output, ImageStream* img_str, const StreamProps& properties,
                                    GfxImageColorMap *colorMap);
 #endif
         }

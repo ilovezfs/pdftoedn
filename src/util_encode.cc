@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sstream>
 #include <ostream>
 
@@ -16,6 +17,12 @@ namespace pdftoedn
     {
         namespace encode
         {
+            static const char* MODULE = "ImageEncoding";
+
+            struct libpng_error : public std::runtime_error {
+                libpng_error(const std::string& what) : runtime_error(what) {}
+            };
+
             // -------------------------------------------------------------------------------
             // image encoding using libpng
             //
@@ -24,8 +31,7 @@ namespace pdftoedn
             // catch PNG errors instead of them getting set to stdout/stderr
             static void user_error_fn(png_structp png_ptr, png_const_charp error_msg)
             {
-                et.log_error( ErrorTracker::ERROR_PNG_ERROR, MODULE, error_msg);
-                throw pnglib_error(error_msg);
+                throw libpng_error(error_msg);
             }
 
             static void user_warning_fn(png_structp png_ptr, png_const_charp warning_msg)
@@ -37,20 +43,31 @@ namespace pdftoedn
             // write / flush methods to write to an ostream
             static void user_io_write(png_structp png_ptr, png_bytep data, png_size_t length)
             {
-                std::ostream* str_p = static_cast<std::ostream*>( png_get_io_ptr(png_ptr) );
+                std::ostream* str_p = reinterpret_cast<std::ostream*>( png_get_io_ptr(png_ptr) );
 
-                if (str_p && data && (length > 0)) {
-                    str_p->write((const char*) data, length);
+                if (!str_p) {
+                    png_error(NULL, "NULL stream pointer passed to PNG write()");
+                    return;
                 }
+
+                if (!data) {
+                    png_error(NULL, "NULL data pointer passed to PNG write()");
+                    return;
+                }
+
+                str_p->write((const char*) data, length);
             }
 
             static void user_io_flush(png_structp png_ptr)
             {
-                std::ostream* str_p = static_cast<std::ostream*>( png_get_io_ptr(png_ptr) );
+                std::ostream* str_p = reinterpret_cast<std::ostream*>( png_get_io_ptr(png_ptr) );
 
-                if (str_p) {
-                    str_p->flush();
+                if (!str_p) {
+                    png_error(NULL, "NULL stream pointer passed to PNG io_flush()");
+                    return;
                 }
+
+                str_p->flush();
             }
 
 
@@ -96,7 +113,7 @@ namespace pdftoedn
 
             //
             // copy pixmap data
-            static bool copy_image_data(png_structp png_ptr,
+            static void copy_image_data(png_structp png_ptr,
                                         ImageStream* img_str, uint32_t width, uint32_t height,
                                         uint8_t num_pix_comps, GfxColorSpaceMode cspace_mode, GfxColorSpace* cspace)
             {
@@ -118,27 +135,29 @@ namespace pdftoedn
                           GfxDeviceCMYKColorSpace* cmyk_cs = dynamic_cast<GfxDeviceCMYKColorSpace*>(cspace);
 
                           if (!cmyk_cs) {
-                              et.log_error( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE,
-                                            "Poppler CMYK image not carrying CMYK color space?" );
-                              return false;
+                              std::stringstream err;
+                              err << __FUNCTION__ << "() - poppler "
+                                  << GfxColorSpace::getColorSpaceModeName(cspace_mode)
+                                  << " stream not carrying CMYK color space";
+                              throw std::runtime_error(err.str());
                           }
 
                           // we'll convert cmyk to RGB so only need 3 color chans
-                          png_bytep row = (png_bytep) png_malloc(png_ptr, 3 * sizeof(png_byte) * width);
-
-                          if (!row) {
-                              et.log_error( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE,
-                                            "png_malloc failed when handling csDeviceCMYK" );
-                              return false;
+                          png_bytep data_row = reinterpret_cast<png_bytep>( png_malloc(png_ptr, 3 * sizeof(png_byte) * width) );
+                          if (!data_row) {
+                              std::stringstream err;
+                              err << __FUNCTION__ << "() - png_malloc failed when handling color space "
+                                  << GfxColorSpace::getColorSpaceModeName(cspace_mode);
+                              throw std::runtime_error(err.str());
                           }
 
                           for (size_t y = 0; y < height; ++y)
                           {
-                              cmyk_cs->getRGBLine(img_str->getLine(), row, width);
-                              png_write_rows(png_ptr, &row, 1);
+                              cmyk_cs->getRGBLine(img_str->getLine(), data_row, width);
+                              png_write_rows(png_ptr, &data_row, 1);
                           }
 
-                          png_free(png_ptr, row);
+                          png_free(png_ptr, data_row);
                       }
                       break;
 
@@ -153,12 +172,12 @@ namespace pdftoedn
                       {
                           Guchar pix[num_pix_comps];
 
-                          png_bytep row = (png_bytep) png_malloc(png_ptr, num_pix_comps * sizeof(png_byte) * width);
-
-                          if (!row) {
-                              et.log_error( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE,
-                                            "png_malloc failed" );
-                              return false;
+                          png_bytep data_row = reinterpret_cast<png_bytep>( png_malloc(png_ptr, num_pix_comps * sizeof(png_byte) * width) );
+                          if (!data_row) {
+                              std::stringstream err;
+                              err << __FUNCTION__ << "() - png_malloc failed for color space "
+                                  << GfxColorSpace::getColorSpaceModeName(cspace_mode);
+                              throw std::runtime_error(err.str());
                           }
 
                           for (size_t y = 0; y < height; ++y)
@@ -167,22 +186,23 @@ namespace pdftoedn
                               {
                                   if (img_str->getPixel(pix)) {
                                       for (int z = 0; z < num_pix_comps; z++) {
-                                          row[x++] = pix[z];
+                                          data_row[x++] = pix[z];
                                       }
                                   }
                               }
-                              png_write_rows(png_ptr, &row, 1);
+                              png_write_rows(png_ptr, &data_row, 1);
                           }
 
-                          png_free(png_ptr, row);
+                          png_free(png_ptr, data_row);
                       }
                       break;
 
                   default:
-                      return false;
-                      break;
+                      std::stringstream err;
+                      err << __FUNCTION__ << "() - unhandled color space mode:  "
+                          << GfxColorSpace::getColorSpaceModeName(cspace_mode);
+                      throw std::runtime_error(err.str());
                 }
-                return true;
             }
 
 
@@ -191,7 +211,7 @@ namespace pdftoedn
             //
             //  http://www.linbox.com/ucome.rvt?file=/any/doc_distrib/libgr-2.0.13/png/example.c
             bool encode_image(std::ostream& output, ImageStream* img_str,
-                              uint32_t width, uint32_t height, uint32_t num_pix_comps, uint8_t bpp,
+                              const StreamProps& properties,
                               GfxImageColorMap *color_map)
             {
                 // Create and initialize the png_struct with the desired error handler
@@ -199,190 +219,6 @@ namespace pdftoedn
                 // you can supply NULL for the last three parameters.  We also check that
                 // the library version is compatible with the one used at compile time,
                 // in case we are using dynamically linked libraries.
-                png_structp png_ptr= png_create_write_struct(PNG_LIBPNG_VER_STRING,
-                                                             NULL,
-                                                             user_error_fn,
-                                                             user_warning_fn);
-                if (!png_ptr) {
-                    return false;
-                }
-
-                // Allocate/initialize the image information data.
-                png_infop info_ptr = png_create_info_struct(png_ptr);
-                if (!info_ptr) {
-                    png_destroy_write_struct(&png_ptr,  (png_infopp)NULL);
-                    return false;
-                }
-
-                // use our write & flush functions
-                png_set_write_fn(png_ptr,
-                                 (png_voidp *)&output,
-                                 user_io_write,
-                                 user_io_flush);
-
-                // Set the image information here.  Width and height
-                // are up to 2^31, bit_depth is one of 1, 2, 4, 8, or
-                // 16, but valid values also depend on the color_type
-                // selected. color_type is one of PNG_COLOR_TYPE_GRAY,
-                // PNG_COLOR_TYPE_GRAY_ALPHA, PNG_COLOR_TYPE_PALETTE,
-                // PNG_COLOR_TYPE_RGB, or PNG_COLOR_TYPE_RGB_ALPHA.
-                // interlace is either PNG_INTERLACE_NONE or
-                // PNG_INTERLACE_ADAM7, and the compression_type and
-                // filter_type MUST currently be
-                // PNG_COMPRESSION_TYPE_BASE and PNG_FILTER_TYPE_BASE.
-                //
-                GfxColorSpaceMode cspace_mode = color_map->getColorSpace()->getMode();
-                int png_type = poppler_cspace_mode_to_png_type(num_pix_comps, cspace_mode);
-
-#if 0
-                std::cerr << "color space mode is: '" << color_map->getColorSpace()->getColorSpaceModeName(cspace_mode)
-                          << "', num pixel comps: " << num_pix_comps
-                          << ", bpp: " << (int) bpp
-                          << std::endl;
-#endif
-
-                png_set_IHDR(png_ptr, info_ptr, width, height, bpp,
-                             png_type,
-                             PNG_INTERLACE_NONE,
-                             PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-                if (pdftoedn::options.libpng_use_best_compression()) {
-                    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
-                }
-
-                // set the palette for indexed-color images
-                png_colorp palette = NULL;
-
-                if (png_type == PNG_COLOR_TYPE_PALETTE)
-                {
-                    int n = 1 << bpp;
-                    palette = (png_colorp) png_malloc(png_ptr, n * sizeof (png_color));
-
-                    if (!palette) {
-                        std::stringstream err;
-                        err << __FUNCTION__ << " - couldn't alloc storage for image palette";
-                        et.log_error( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, err.str() );
-
-                        png_destroy_write_struct(&png_ptr, &info_ptr);
-                        return false;
-                    }
-
-                    Guchar pix;
-                    GfxRGB rgb;
-
-                    for (int i = 0; i < n; i++) {
-                        pix = (Guchar) i;
-
-                        color_map->getRGB(&pix, &rgb);
-                        palette[i].red = colToByte(rgb.r);
-                        palette[i].green = colToByte(rgb.g);
-                        palette[i].blue = colToByte(rgb.b);
-                    }
-
-                    png_set_PLTE(png_ptr, info_ptr, palette, n);
-                }
-
-#if 0 //def PNG_sBIT_SUPPORTED
-                // optional significant bit chunk
-                png_color_8 sig_bit;
-                // if we are dealing with a grayscale image then
-                sig_bit.gray = true_bit_depth;
-                // otherwise, if we are dealing with a color image then
-                sig_bit.red = true_red_bit_depth;
-                sig_bit.green = true_green_bit_depth;
-                sig_bit.blue = true_blue_bit_depth;
-                // if the image has an alpha channel then
-                sig_bit.alpha = true_alpha_bit_depth;
-                png_set_sBIT(png_ptr, info_ptr, sig_bit);
-#endif
-
-#if 0
-                // Optional gamma chunk is strongly suggested if you have any guess
-                // as to the correct gamma of the image.
-                png_set_gAMA(png_ptr, info_ptr, gamma);
-#endif
-
-                // other optional chunks like cHRM, bKGD, tRNS, tIME, oFFs, pHYs,
-
-                // Write the file header information.
-                png_write_info(png_ptr, info_ptr);
-
-                // Once we write out the header, the compression type on the text
-                // chunks gets changed to PNG_TEXT_COMPRESSION_NONE_WR or
-                // PNG_TEXT_COMPRESSION_zTXt_WR, so it doesn't get written out again
-                // at the end.
-
-                // set up the transformations you want.  Note that these are
-                // all optional.  Only call them if you want them.
-
-#if 0 //def PNG_WRITE_INVERT_SUPPORTED
-                // invert monocrome pixels
-                png_set_invert_mono(png_ptr);
-#endif
-
-#if 0 //def PNG_sBIT_SUPPORTED
-                // Shift the pixels up to a legal bit depth and fill in
-                // as appropriate to correctly scale the image
-                png_set_shift(png_ptr, &sig_bit);
-#endif
-
-                // pack pixels into bytes
-                png_set_packing(png_ptr);
-
-                // swap location of alpha bytes from ARGB to RGBA
-                //            png_set_swap_alpha(png_ptr);
-
-                // Get rid of filler (OR ALPHA) bytes, pack XRGB/RGBX/ARGB/RGBA into
-                // RGB (4 channels -> 3 channels). The second parameter is not used.
-                //            png_set_filler(png_ptr, 0, PNG_FILLER_BEFORE);
-
-                // flip BGR pixels to RGB
-                //            png_set_bgr(png_ptr);
-
-                // swap bytes of 16-bit files to most significant byte first
-                //            png_set_swap(png_ptr);
-
-                // swap bits of 1, 2, 4 bit packed pixel formats
-                png_set_packswap(png_ptr);
-
-                // ready to copy the data - iterate through the lines
-                bool write_status;
-                try
-                {
-                    write_status = copy_image_data(png_ptr, img_str, width, height, num_pix_comps, cspace_mode, color_map->getColorSpace());
-                } catch (pnglib_error& e) {
-                    write_status = false;
-                }
-
-                if (write_status) {
-                    // finish writing the rest of the file
-                    png_write_end(png_ptr, info_ptr);
-                }
-
-                // free the palette if allocated
-                if (palette) {
-                    png_free(png_ptr, palette);
-                }
-
-                // clean up after the write, and free any memory allocated
-                png_destroy_write_struct(&png_ptr, &info_ptr);
-                return true;
-            }
-
-
-            //
-            // export the data as a PNG RGBA onto an ostream - based on:
-            //
-            //  http://www.linbox.com/ucome.rvt?file=/any/doc_distrib/libgr-2.0.13/png/example.c
-            bool encode_rgba_image(std::ostream& output,
-                                   ImageStream* img_str, uint32_t width, uint32_t height,
-                                   uint32_t num_pix_comps, uint8_t bpp, GfxImageColorMap *color_map,
-                                   ImageStream* mask_str, uint32_t mask_width, uint32_t mask_height,
-                                   uint32_t mask_num_pix_comps, uint8_t mask_bpp, GfxImageColorMap *mask_color_map,
-                                   bool mask_invert)
-            {
-                // Create and initialize the png_struct with the desired error handler
-                // functions.
                 png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
                                                               NULL,
                                                               user_error_fn,
@@ -394,16 +230,134 @@ namespace pdftoedn
                 // Allocate/initialize the image information data.
                 png_infop info_ptr = png_create_info_struct(png_ptr);
                 if (!info_ptr) {
-                    png_destroy_write_struct(&png_ptr,  (png_infopp)NULL);
+                    png_destroy_write_struct(&png_ptr, reinterpret_cast<png_infopp>(NULL));
                     return false;
                 }
 
                 // use our write & flush functions
                 png_set_write_fn(png_ptr,
-                                 (png_voidp *)&output,
+                                 reinterpret_cast<png_voidp *>(&output),
                                  user_io_write,
                                  user_io_flush);
 
+                // prep some things before we make the libpng calls
+                uintmax_t width = properties.bitmap_width();
+                uintmax_t height = properties.bitmap_height();
+                uint8_t bpp = properties.bitmap_bpp();
+                uint8_t num_pix_comps = properties.bitmap_num_pixel_comps();
+
+                GfxColorSpaceMode cspace_mode = color_map->getColorSpace()->getMode();
+                int png_type = poppler_cspace_mode_to_png_type(num_pix_comps, cspace_mode);
+                png_colorp palette = NULL;
+
+#if 0
+                std::cerr << "color space mode is: '"
+                          << color_map->getColorSpace()->getColorSpaceModeName(cspace_mode)
+                          << "', num pixel comps: " << num_pix_comps
+                          << ", bpp: " << (int) bpp
+                          << std::endl;
+#endif
+
+                bool status = true;
+                try
+                {
+                    // Set the image information here.  Width and height
+                    // are up to 2^31, bit_depth is one of 1, 2, 4, 8, or
+                    // 16, but valid values also depend on the color_type
+                    // selected. color_type is one of PNG_COLOR_TYPE_GRAY,
+                    // PNG_COLOR_TYPE_GRAY_ALPHA, PNG_COLOR_TYPE_PALETTE,
+                    // PNG_COLOR_TYPE_RGB, or PNG_COLOR_TYPE_RGB_ALPHA.
+                    // interlace is either PNG_INTERLACE_NONE or
+                    // PNG_INTERLACE_ADAM7, and the compression_type and
+                    // filter_type MUST currently be
+                    // PNG_COMPRESSION_TYPE_BASE and PNG_FILTER_TYPE_BASE.
+                    //
+                    png_set_IHDR(png_ptr, info_ptr, width, height, bpp,
+                                 png_type,
+                                 PNG_INTERLACE_NONE,
+                                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+                    if (pdftoedn::options.libpng_use_best_compression()) {
+                        png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+                    }
+
+                    // allocate palette for indexed-color images
+                    if (png_type == PNG_COLOR_TYPE_PALETTE)
+                    {
+                        int n = 1 << bpp;
+
+                        palette = reinterpret_cast<png_colorp>( png_malloc(png_ptr, n * sizeof (png_color)) );
+                        if (!palette) {
+                            std::stringstream err;
+                            err << __FUNCTION__ << "() - couldn't alloc storage for image palette";
+                            throw std::runtime_error(err.str());
+                        }
+
+                        Guchar pix;
+                        GfxRGB rgb;
+
+                        for (int i = 0; i < n; i++) {
+                            pix = (Guchar) i;
+
+                            color_map->getRGB(&pix, &rgb);
+                            palette[i].red = colToByte(rgb.r);
+                            palette[i].green = colToByte(rgb.g);
+                            palette[i].blue = colToByte(rgb.b);
+                        }
+
+                        png_set_PLTE(png_ptr, info_ptr, palette, n);
+                    }
+
+                    // Write the file header information.
+                    png_write_info(png_ptr, info_ptr);
+
+                    // pack pixels into bytes
+                    png_set_packing(png_ptr);
+
+                    // swap bits of 1, 2, 4 bit packed pixel formats
+                    png_set_packswap(png_ptr);
+
+                    // ready to copy the data - iterate through the lines
+                    img_str->reset();
+                    copy_image_data(png_ptr, img_str, width, height, num_pix_comps,
+                                    cspace_mode, color_map->getColorSpace());
+
+                    // finish writing the rest of the file
+                    png_write_end(png_ptr, info_ptr);
+
+                }
+                catch (libpng_error& e) {
+                    et.log_critical( ErrorTracker::ERROR_PNG_ERROR, MODULE, e.what() );
+                    status = false;
+                }
+                catch (std::exception& e) {
+                    et.log_critical( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, e.what() );
+                    status = false;
+                }
+
+                // cleanup
+                img_str->close();
+
+                // free the palette if allocated
+                if (palette) {
+                    png_free(png_ptr, palette);
+                }
+
+                // clean up after the write, and free any memory allocated
+                png_destroy_write_struct(&png_ptr, &info_ptr);
+                return status;
+            }
+
+
+            //
+            // export the data as a PNG RGBA onto an ostream - based on:
+            //
+            //  http://www.linbox.com/ucome.rvt?file=/any/doc_distrib/libgr-2.0.13/png/example.c
+            bool encode_rgba_image(std::ostream& output, ImageStream* img_str, ImageStream* mask_str,
+                                   const StreamProps& properties,
+                                   GfxImageColorMap *color_map, GfxImageColorMap *mask_color_map,
+                                   bool mask_invert)
+            {
                 // Set the image information here
                 GfxColorSpaceMode cspace_mode = color_map->getColorSpace()->getMode();
                 int png_type;
@@ -419,63 +373,94 @@ namespace pdftoedn
                       break;
                   default:
                       std::stringstream err;
-                      err << __FUNCTION__ << " - image unhandled cspace mode (" << color_map->getColorSpace()->getColorSpaceModeName(cspace_mode) << ")";
-                      et.log_error( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, err.str() );
-
-                      png_destroy_write_struct(&png_ptr, &info_ptr);
+                      err << __FUNCTION__ << " - image unhandled cspace mode ("
+                          << color_map->getColorSpace()->getColorSpaceModeName(cspace_mode)
+                          << ")";
+                      et.log_critical( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, err.str() );
                       return false;
                 }
 
-                png_set_IHDR(png_ptr, info_ptr, width, height, bpp,
-                             png_type,
-                             PNG_INTERLACE_NONE,
-                             PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-                if (pdftoedn::options.libpng_use_best_compression()) {
-                    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+                // Create and initialize the png_struct with the desired error handler
+                // functions.
+                png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
+                                                              NULL,
+                                                              user_error_fn,
+                                                              user_warning_fn);
+                if (!png_ptr) {
+                    return false;
                 }
 
-                // set the palette for indexed-color images
+                // Allocate/initialize the image information data.
+                png_infop info_ptr = png_create_info_struct(png_ptr);
+                if (!info_ptr) {
+                    png_destroy_write_struct(&png_ptr, reinterpret_cast<png_infopp>(NULL));
+                    return false;
+                }
+
+                // use our write & flush functions
+                png_set_write_fn(png_ptr,
+                                 reinterpret_cast<png_voidp *>(&output),
+                                 user_io_write,
+                                 user_io_flush);
+
+                uintmax_t width = properties.bitmap_width();
+                uintmax_t height = properties.bitmap_height();
+                uint8_t num_pix_comps = properties.bitmap_num_pixel_comps();
+                uint8_t bpp = properties.bitmap_bpp();
+                uintmax_t mask_width = properties.mask_width();
+                uintmax_t mask_height = properties.mask_height();
+                uint8_t mask_num_pix_comps = properties.mask_num_pixel_comps();
                 png_colorp palette = NULL;
 
-                // Write the file header information.
-                png_write_info(png_ptr, info_ptr);
+                png_bytep data_row = NULL;
+                uint8_t* mask_buf = NULL;
+                bool status = true;
 
-                // pack pixels into bytes
-                png_set_packing(png_ptr);
-
-                // swap bits of 1, 2, 4 bit packed pixel formats
-                png_set_packswap(png_ptr);
-
-                // ready to copy image data - combine the image data
-                // (RGB if 3 bpp, Grey if 1) with mask data
-                // (1-channel) to form an RGBA png
-                Guchar pix[num_pix_comps];
-                Guchar* mask_bits;
-                uint32_t o_num_pix_comps = 4; // add 1 for alpha channel
-
-                png_bytep row = (png_bytep) png_malloc(png_ptr, o_num_pix_comps * sizeof(png_byte) * width);
-
-                if (!row) {
-                    png_destroy_write_struct(&png_ptr, &info_ptr);
-                    return false;
-                }
-
-                // allocate a buffer for the mask line
-                uint8_t* mask_buf = new uint8_t[mask_width * mask_num_pix_comps];
-
-                if (!mask_buf) {
-                    png_free(png_ptr, row);
-                    png_destroy_write_struct(&png_ptr, &info_ptr);
-                    return false;
-                }
-
-                img_str->reset();
-                mask_str->reset();
-
-                bool write_status = true;
                 try
                 {
+                    png_set_IHDR(png_ptr, info_ptr, width, height, bpp,
+                                 png_type,
+                                 PNG_INTERLACE_NONE,
+                                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+                    if (pdftoedn::options.libpng_use_best_compression()) {
+                        png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+                    }
+
+                    // Write the file header information.
+                    png_write_info(png_ptr, info_ptr);
+
+                    // pack pixels into bytes
+                    png_set_packing(png_ptr);
+
+                    // swap bits of 1, 2, 4 bit packed pixel formats
+                    png_set_packswap(png_ptr);
+
+                    // ready to copy image data - combine the image data
+                    // (RGB if 3 bpp, Grey if 1) with mask data
+                    // (1-channel) to form an RGBA png
+                    Guchar pix[num_pix_comps];
+                    Guchar* mask_bits;
+                    uint32_t o_num_pix_comps = 4; // add 1 for alpha channel
+
+                    data_row = reinterpret_cast<png_bytep>( png_malloc(png_ptr, o_num_pix_comps * sizeof(png_byte) * width) );
+                    if (!data_row) {
+                        std::stringstream err;
+                        err << __FUNCTION__ << "() - couldn't alloc storage for image row buffer";
+                        throw std::runtime_error(err.str());
+                    }
+
+                    // allocate a buffer for the mask line
+                    mask_buf = new uint8_t[mask_width * mask_num_pix_comps];
+                    if (!mask_buf) {
+                        std::stringstream err;
+                        err << __FUNCTION__ << "() - couldn't alloc storage for mask buffer";
+                        throw std::runtime_error(err.str());
+                    }
+
+                    img_str->reset();
+                    mask_str->reset();
+
                     // process image line by line
                     for (size_t y = 0; y < height; ++y)
                     {
@@ -500,37 +485,44 @@ namespace pdftoedn
                                 if (num_pix_comps > 1) {
                                     GfxRGB rgb;
                                     color_map->getRGB(pix, &rgb);
-                                    row[x++] = colToByte(rgb.r);
-                                    row[x++] = colToByte(rgb.g);
-                                    row[x++] = colToByte(rgb.b);
+                                    data_row[x++] = colToByte(rgb.r);
+                                    data_row[x++] = colToByte(rgb.g);
+                                    data_row[x++] = colToByte(rgb.b);
                                 } else {
                                     GfxGray g;
                                     color_map->getGray(pix, &g);
                                     uint8_t c = colToByte(g);
 
-                                    row[x++] = c;
-                                    row[x++] = c;
-                                    row[x++] = c;
+                                    data_row[x++] = c;
+                                    data_row[x++] = c;
+                                    data_row[x++] = c;
                                 }
                             }
 
                             // and set alpha to the mask value
-                            row[x++] = mask_buf[mx++];
+                            data_row[x++] = mask_buf[mx++];
                         }
-                        png_write_rows(png_ptr, &row, 1);
+                        png_write_rows(png_ptr, &data_row, 1);
                     }
-                } catch (pnglib_error& e) {
-                    write_status = false;
+
+                    png_write_end(png_ptr, info_ptr);
+                }
+                catch (libpng_error& e) {
+                    et.log_critical( ErrorTracker::ERROR_PNG_ERROR, MODULE, e.what() );
+                    status = false;
+                }
+                catch (std::exception& e) {
+                    et.log_critical( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, e.what() );
+                    status = false;
                 }
 
+                // cleanup
                 mask_str->close();
+                img_str->close();
 
                 delete [] mask_buf;
-                png_free(png_ptr, row);
-
-                // finish writing the rest of the file
-                if (write_status) {
-                    png_write_end(png_ptr, info_ptr);
+                if (data_row) {
+                    png_free(png_ptr, data_row);
                 }
 
                 // free the palette if allocated
@@ -540,15 +532,14 @@ namespace pdftoedn
 
                 // clean up after the write, and free any memory allocated
                 png_destroy_write_struct(&png_ptr, &info_ptr);
-                return true;
+                return status;
             }
 
 
             //
             // export a mask onto a stream as a PNG w/ transparency.
             // Yeah, lots of replicated steps from encode_image.. :(
-            bool encode_mask(std::ostream& output, ImageStream* img_str, uint32_t width, uint32_t height,
-                             const StreamProps& properties)
+            bool encode_mask(std::ostream& output, ImageStream* img_str, const StreamProps& properties)
             {
                 png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
                                                               NULL,
@@ -560,96 +551,107 @@ namespace pdftoedn
 
                 png_infop info_ptr = png_create_info_struct(png_ptr);
                 if (!info_ptr) {
-                    png_destroy_write_struct(&png_ptr,  (png_infopp)NULL);
+                    png_destroy_write_struct(&png_ptr, reinterpret_cast<png_infopp>(NULL));
                     return false;
                 }
 
                 png_set_write_fn(png_ptr,
-                                 (png_voidp *)&output,
+                                 reinterpret_cast<png_voidp *>(&output),
                                  user_io_write,
                                  user_io_flush);
 
-                // 2-palette entries.. one is set to transparent (0x00)
-                png_byte transp[2] = { 0xff, 0x00 };
-                png_set_tRNS(png_ptr, info_ptr, transp, 2, NULL);
-
-                // save the header chunk
-                png_set_IHDR(png_ptr, info_ptr, width, height, 1,
-                             PNG_COLOR_TYPE_PALETTE,
-                             PNG_INTERLACE_NONE,
-                             PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-                if (pdftoedn::options.libpng_use_best_compression()) {
-                    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
-                }
-
-                // set the palette
-                png_colorp palette = (png_colorp) png_malloc(png_ptr, 2 * sizeof(png_colorp));
-
-                if (!palette)
-                {
-                    std::stringstream err;
-                    err << __FUNCTION__ << " - couldn't alloc storage for image palette";
-                    et.log_error( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, err.str() );
-
-                    png_destroy_write_struct(&png_ptr, &info_ptr);
-                    return false;
-                }
-
-                palette[0].red   = properties.mask_fill_color().red();
-                palette[0].green = properties.mask_fill_color().green();
-                palette[0].blue  = properties.mask_fill_color().blue();
-
-                // by default set the 2nd color to white.. leptonica
-                // does not preserve transparency so this should make
-                // it match white background at least
-                palette[1].red   = palette[1].green = palette[1].blue = 0xff;
-                png_set_PLTE(png_ptr, info_ptr, palette, 2);
-
-                // Write the file header information.
-                png_write_info(png_ptr, info_ptr);
-
-                // pack pixels into bytes
-                png_set_packing(png_ptr);
-                // swap bits of 1, 2, 4 bit packed pixel formats - we
-                // don't need this but I've found some images in PDFs
-                // that cause a segfault when this is disabled. Ugh.
-                png_set_packswap(png_ptr);
-
-                // reset the poppler image stream
-                img_str->reset();
-
-                uint8_t* row = new uint8_t[ width ];
-
-                bool write_status = true;
+                uintmax_t width = properties.mask_width();
+                uintmax_t height = properties.mask_height();
+                png_colorp palette = NULL;
+                uint8_t* data_row = NULL;
+                bool status = true;
 
                 try
                 {
+                    // 2-palette entries.. one is set to transparent (0x00)
+                    png_byte transp[2] = { 0xff, 0x00 };
+                    png_set_tRNS(png_ptr, info_ptr, transp, 2, NULL);
+
+                    // save the header chunk
+                    png_set_IHDR(png_ptr, info_ptr, width, height, 1,
+                                 PNG_COLOR_TYPE_PALETTE,
+                                 PNG_INTERLACE_NONE,
+                                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+                    if (pdftoedn::options.libpng_use_best_compression()) {
+                        png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+                    }
+
+                    // set the palette
+                    palette = reinterpret_cast<png_colorp>( png_malloc(png_ptr, 2 * sizeof(png_colorp)) );
+                    if (!palette) {
+                        std::stringstream err;
+                        err << __FUNCTION__ << "() - couldn't alloc storage for image palette";
+                        throw std::runtime_error(err.str());
+                    }
+
+                    palette[0].red   = properties.mask_fill_color().red();
+                    palette[0].green = properties.mask_fill_color().green();
+                    palette[0].blue  = properties.mask_fill_color().blue();
+
+                    // by default set the 2nd color to white.. leptonica
+                    // does not preserve transparency so this should make
+                    // it match white background at least
+                    palette[1].red   = palette[1].green = palette[1].blue = 0xff;
+                    png_set_PLTE(png_ptr, info_ptr, palette, 2);
+
+                    // Write the file header information.
+                    png_write_info(png_ptr, info_ptr);
+
+                    // pack pixels into bytes
+                    png_set_packing(png_ptr);
+                    // swap bits of 1, 2, 4 bit packed pixel formats - we
+                    // don't need this but I've found some images in PDFs
+                    // that cause a segfault when this is disabled. Ugh.
+                    png_set_packswap(png_ptr);
+
+                    data_row = new uint8_t[ width ];
+                    if (!data_row) {
+                        std::stringstream err;
+                        err << __FUNCTION__ << "() - couldn't alloc storage for image row buffer";
+                        throw std::runtime_error(err.str());
+                    }
+
+                    // reset the poppler image stream
+                    img_str->reset();
+
                     for (size_t y = 0; y < height; y++) {
                         Guchar* pix = img_str->getLine();
                         for (size_t x = 0; x < width; x++) {
-                            row[x] = (properties.is_inverted() ? !pix[x] : pix[x]);
+                            data_row[x] = (properties.mask_is_inverted() ? !pix[x] : pix[x]);
                         }
-                        png_write_rows(png_ptr, &row, 1);
+                        png_write_rows(png_ptr, &data_row, 1);
                     }
-                } catch (pnglib_error& e) {
-                    write_status = false;
-                }
 
-                delete [] row;
-
-                // finish writing the rest of the file
-                if (write_status) {
                     png_write_end(png_ptr, info_ptr);
+                }
+                catch (libpng_error& e) {
+                    et.log_critical( ErrorTracker::ERROR_PNG_ERROR, MODULE, e.what() );
+                    status = false;
+                }
+                catch (std::exception& e) {
+                    et.log_critical( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, e.what() );
+                    status = false;
                 }
 
                 // cleanup
-                png_free(png_ptr, palette);
+                img_str->close();
+
+                delete [] data_row;
+
+                if (palette) {
+                    png_free(png_ptr, palette);
+                }
 
                 // clean up after the write, and free any memory allocated
                 png_destroy_write_struct(&png_ptr, &info_ptr);
 
-                return true;
+                return status;
             }
 
 
@@ -658,7 +660,7 @@ namespace pdftoedn
             // export the data to PNG, forcing grayscale output instead of palletized
             //
             bool encode_grey_image(std::ostream& output, ImageStream* img_str,
-                                   uint32_t width, uint32_t height, uint32_t num_pix_comps, uint8_t bpp,
+                                   const StreamProps& properties,
                                    GfxImageColorMap *color_map)
             {
                 png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
@@ -672,7 +674,7 @@ namespace pdftoedn
                 // Allocate/initialize the image information data.
                 png_infop info_ptr = png_create_info_struct(png_ptr);
                 if (!info_ptr) {
-                    png_destroy_write_struct(&png_ptr, (png_infopp) NULL);
+                    png_destroy_write_struct(&png_ptr, reinterpret_cast<png_infopp>(NULL));
                     return false;
                 }
 
@@ -692,63 +694,69 @@ namespace pdftoedn
                           << std::endl;
 #endif
 
-                png_set_IHDR(png_ptr, info_ptr, width, height, bpp, // change bpp to 1 / 8-bit if needed
-                             PNG_COLOR_TYPE_GRAY, // forcing GRAY
-                             PNG_INTERLACE_NONE,
-                             PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-#ifdef MOTO_USE_BEST_COMPRESSION
-                png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
-#endif
-
-                // Write the file header information.
-                png_write_info(png_ptr, info_ptr);
-
-                // pack pixels into bytes
-                png_set_packing(png_ptr);
-
-                // swap bits of 1, 2, 4 bit packed pixel formats
-                png_set_packswap(png_ptr);
-
-                // ready to copy the data - iterate through the lines
-                png_bytep row = (png_bytep) png_malloc(png_ptr, num_pix_comps * sizeof(png_byte) * width);
-
-                if (!row) {
-                    std::stringstream err;
-                    err << __FUNCTION__ << " - png_malloc failed";
-                    et.log_error( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, err.str() );
-                    return false;
-                }
-
-                // write the data, row by row
-                img_str->reset();
-                bool write_status = true;
+                png_bytep data_row = NULL;
+                bool status = true;
                 try
                 {
+                    png_set_IHDR(png_ptr, info_ptr, width, height, bpp, // change bpp to 1 / 8-bit if needed
+                                 PNG_COLOR_TYPE_GRAY, // forcing GRAY
+                                 PNG_INTERLACE_NONE,
+                                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+#ifdef MOTO_USE_BEST_COMPRESSION
+                    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+#endif
+
+                    // Write the file header information.
+                    png_write_info(png_ptr, info_ptr);
+
+                    // pack pixels into bytes
+                    png_set_packing(png_ptr);
+
+                    // swap bits of 1, 2, 4 bit packed pixel formats
+                    png_set_packswap(png_ptr);
+
+                    // ready to copy the data - iterate through the lines
+                    data_row = reinterpret_cast<png_bytep>( png_malloc(png_ptr, num_pix_comps * sizeof(png_byte) * width) );
+                    if (!data_row) {
+                        std::stringstream err;
+                        err << __FUNCTION__ << " - png_malloc failed for data row";
+                        throw std::runtime_error(err.str());
+                    }
+
+                    // write the data, row by row
+                    img_str->reset();
+
                     GfxGray gray;
                     for (size_t y = 0; y < height; y++) {
                         Guchar* pix = img_str->getLine();
 
                         for (size_t x = 0; x < width; x++) {
                             color_map->getGray(&pix[x], &gray);
-                            row[x] = (png_byte) colToByte(gray);
+                            data_row[x] = reinterpret_cast<png_byte>( colToByte(gray) );
                         }
-                        png_write_rows(png_ptr, &row, 1);
+                        png_write_rows(png_ptr, &data_row, 1);
                     }
-                } catch (pnglib_error& e) {
-                    write_status = false;
+                    img_str->close();
+
+                    png_write_end(png_ptr, info_ptr);
+                }
+                catch (libpng_error& e) {
+                    et.log_critical( ErrorTracker::ERROR_PNG_ERROR, MODULE, e.what() );
+                    status = false;
+                }
+                catch (std::exception& e) {
+                    et.log_critical( ErrorTracker::ERROR_UT_IMAGE_ENCODE, MODULE, e.what() );
+                    status = false;
                 }
 
-                png_free(png_ptr, row);
-
-                if (write_status) {
-                    // finish writing the rest of the file
-                    png_write_end(png_ptr, info_ptr);
+                if (data_row) {
+                    png_free(png_ptr, data_row);
                 }
 
                 // clean up after the write, and free any memory allocated
                 png_destroy_write_struct(&png_ptr, &info_ptr);
-                return true;
+                return status;
             }
 #endif
 

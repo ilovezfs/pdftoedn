@@ -159,9 +159,6 @@ namespace pdftoedn
     struct invalid_file : public std::invalid_argument {
         invalid_file(const std::string& what) : invalid_argument(what) {}
     };
-    struct pnglib_error : public std::runtime_error {
-        pnglib_error(const std::string& what) : runtime_error(what) {}
-    };
 
     extern pdftoedn::ErrorTracker et;
 } // namespace
