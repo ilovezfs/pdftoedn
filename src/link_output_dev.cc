@@ -30,11 +30,11 @@ namespace pdftoedn
 
         // allocate a new page in the collector doc. and register the
         // error callback
-        if (page_out) {
-            delete page_out;
+        if (pg_data) {
+            delete pg_data;
         }
 
-        page_out = new pdftoedn::PdfPage(pageNum, w, h, rot);
+        pg_data = new pdftoedn::PdfPage(pageNum, w, h, rot);
 
         // links
         process_page_links( pageNum );

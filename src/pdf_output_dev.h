@@ -14,6 +14,7 @@
 namespace pdftoedn
 {
     class FontEngine;
+    class StreamProps;
 
     //------------------------------------------------------------------------
     // pdftoedn::OutputDev
@@ -169,6 +170,10 @@ namespace pdftoedn
         int inline_img_id;
 
         // non-virtual methods; helpers
+        bool process_image_blob(const std::ostringstream* blob, const PdfTM& ctm,
+                                const BoundingBox& bbox, const StreamProps& properties,
+                                int width, int height,
+                                intmax_t& ref_num);
         void build_path_command(GfxState* state, PdfDocPath::Type type,
                                 PdfDocPath::EvenOddRule eo_rule = PdfDocPath::EVEN_ODD_RULE_DISABLED);
     };

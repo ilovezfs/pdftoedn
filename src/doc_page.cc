@@ -174,7 +174,7 @@ namespace pdftoedn
     //
     // checks if an image has been cached based on md5 (for inlined
     // images w/out resource id)
-    bool PdfPage::image_is_cached(const std::string& md5, intmax_t& res_id) const
+    bool PdfPage::inlined_image_is_cached(const std::string& md5, intmax_t& res_id) const
     {
         auto ii = find_if( images.begin(), images.end(),
                            [&](const ImageData* i) { return (i->md5() == md5); }
@@ -189,27 +189,16 @@ namespace pdftoedn
     }
 
     //
-    // adds an image blob to the table
+    // adds an image blob to the table - note that this takes width
+    // and height separately from the values in StreamProps as they
+    // may be modified due to a transformation. StreamProps refers to
+    // the original stream properties of the source image in the PDF
     bool PdfPage::cache_image(intmax_t res_id, const BoundingBox& bbox,
                               int width, int height,
                               const StreamProps& properties,
                               const std::string& data,
-                              intmax_t& ret_img_id)
+                              const std::string& data_md5)
     {
-        std::string data_md5( util::md5(data) );
-
-        // we've seen instances of repeated usage of inlined streams
-        // so we must check if an entry already exists for it (using
-        // md5)
-        if (properties.is_inlined()) {
-            intmax_t cached_res_id;
-            if (image_is_cached(data_md5, cached_res_id)) {
-                // return the resource id found
-                ret_img_id = cached_res_id;
-                return true;
-            }
-        }
-
         // determine a file name for the image within the resource
         // directory and write it
         std::string img_file_path;
@@ -229,12 +218,11 @@ namespace pdftoedn
         // image is written. Save info in an ImageData for object
         // output but use the relative path name in the output
         ImageData* image = new ImageData(res_id, bbox, width, height,
-                                         properties, data, data_md5,
+                                         properties, data_md5,
                                          pdftoedn::options.get_image_rel_path(img_file_path));
 
         // cache meta and return the used resource id
         images.insert( images.end(), image );
-        ret_img_id = res_id;
         return true;
     }
 

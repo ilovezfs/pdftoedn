@@ -15,7 +15,7 @@ namespace pdftoedn
     class EngOutputDev : public ::OutputDev {
     public:
         EngOutputDev(Catalog* doc_cat) :
-            catalog(doc_cat), page_out(NULL) { }
+            catalog(doc_cat), pg_data(NULL) { }
         virtual ~EngOutputDev();
 
         // skip anything larger than 10 inches
@@ -29,11 +29,11 @@ namespace pdftoedn
 
         // returns the collected data after displayPage has been
         // called to process a page
-        const PdfPage* page_output() const { return page_out; }
+        const PdfPage* page_data() const { return pg_data; }
 
     protected:
         Catalog* catalog;
-        pdftoedn::PdfPage* page_out;
+        pdftoedn::PdfPage* pg_data;
 
         void process_page_links(int page_num);
         void create_annot_link(AnnotLink *link);

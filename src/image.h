@@ -35,46 +35,49 @@ namespace pdftoedn
         };
 
         // masks
-        StreamProps(stream_type_e str_type, uint32_t width, uint32_t height,
+        StreamProps(StreamKind strKind, uint32_t width, uint32_t height,
                     const RGBColor& fill, GfxColorSpaceMode fill_cs_mode,
-                    bool interpolate, bool img_upside_down, bool str_inlined,
+                    bool interpolate, bool mask_upside_down, bool str_inlined,
                     bool invert) :
             type(MASK),
-            mask(str_type, width, height, 1, 1, interpolate, invert, fill, fill_cs_mode),
+            mask(strKind, width, height, 1, 1, interpolate, invert, fill, fill_cs_mode),
             inlined(str_inlined),
-            upside_down(img_upside_down)
+            upside_down(mask_upside_down)
         { }
         // images
-        StreamProps(stream_type_e str_type, uint32_t width, uint32_t height,
+        StreamProps(StreamKind strKind, uint32_t width, uint32_t height,
                     uint8_t num_pixel_comps, uint8_t bits_per_pixel,
-                    bool interpolate, bool img_upside_down, bool str_inlined = false) :
+                    bool interpolate, bool img_upside_down, bool str_inlined) :
             type(IMAGE),
-            bitmap(str_type, width, height, num_pixel_comps, bits_per_pixel, interpolate),
+            bitmap(strKind, width, height, num_pixel_comps, bits_per_pixel, interpolate),
             inlined(str_inlined),
             upside_down(img_upside_down)
         { }
         // soft masked images
-        StreamProps(stream_type_e str_type, uint32_t width, uint32_t height,
-                    uint8_t num_pixel_comps, uint8_t bits_per_pixel, bool interpolate,
-                    stream_type_e mask_str_type, uint32_t mask_width, uint32_t mask_height,
-                    uint8_t mask_num_pixel_comps, uint8_t mask_bits_per_pixel, bool mask_interpolate,
+        StreamProps(StreamKind strKind, uint32_t width, uint32_t height,
+                    GfxImageColorMap* colorMap, bool interpolate,
+                    StreamKind mskStrKind, uint32_t mask_width, uint32_t mask_height,
+                    GfxImageColorMap* mskColorMap, bool mask_interpolate,
                     bool img_upside_down) :
             type(SOFT_MASKED_IMAGE),
-            bitmap(str_type, width, height, num_pixel_comps, bits_per_pixel, interpolate),
-            mask(mask_str_type, mask_width, mask_height, mask_num_pixel_comps, mask_bits_per_pixel,
-                 mask_interpolate, false),
+            bitmap(strKind, width, height,
+                   colorMap->getNumPixelComps(), colorMap->getBits(), interpolate),
+            mask(mskStrKind, mask_width, mask_height,
+                 mskColorMap->getNumPixelComps(), colorMap->getBits(), mask_interpolate,
+                 false),
             inlined(false),
             upside_down(img_upside_down)
         { }
         // masked images
-        StreamProps(stream_type_e str_type, uint32_t width, uint32_t height,
-                    uint8_t num_pixel_comps, uint8_t bits_per_pixel, bool interpolate,
-                    stream_type_e mask_str_type, uint32_t mask_width, uint32_t mask_height,
+        StreamProps(StreamKind strKind, uint32_t width, uint32_t height,
+                    GfxImageColorMap* colorMap, bool interpolate,
+                    StreamKind mskStrKind, uint32_t mask_width, uint32_t mask_height,
                     bool mask_interpolate, bool mask_invert,
                     bool img_upside_down) :
             type(MASKED_IMAGE),
-            bitmap(str_type, width, height, num_pixel_comps, bits_per_pixel, interpolate),
-            mask(mask_str_type, mask_width, mask_height, 1, 1, mask_interpolate, mask_invert),
+            bitmap(strKind, width, height,
+                   colorMap->getNumPixelComps(), colorMap->getBits(), interpolate),
+            mask(mskStrKind, mask_width, mask_height, 1, 1, mask_interpolate, mask_invert),
             inlined(false),
             upside_down(img_upside_down)
         { }
@@ -103,12 +106,8 @@ namespace pdftoedn
         // needed
         struct BitmapAttribs {
             BitmapAttribs() : stream_type(STREAM_UNDEF) { }
-            BitmapAttribs(stream_type_e str_type, uint32_t w, uint32_t h,
-                          uint8_t num_comps, uint8_t bpp, bool interp) :
-                stream_type(str_type), width(w), height(h),
-                num_pixel_comps(num_comps), bits_per_pixel(bpp),
-                interpolate(interp)
-            {}
+            BitmapAttribs(StreamKind strKind, uint32_t w, uint32_t h,
+                          uint8_t num_comps, uint8_t bpp, bool interp);
 
             stream_type_e stream_type;
             uintmax_t width, height;
@@ -119,20 +118,11 @@ namespace pdftoedn
 
         struct MaskAttribs {
             MaskAttribs() : stream_type(STREAM_UNDEF), interpolate(false), invert(false) { }
-            MaskAttribs(stream_type_e str_type, uintmax_t w, uintmax_t h,
-                        uint8_t pix_comps, uint8_t bpp, bool interp, bool m_inverted) :
-                stream_type(str_type), width(w), height(h),
-                num_pixel_comps(pix_comps), bits_per_pixel(bpp),
-                interpolate(interp), invert(m_inverted)
-            { }
-            MaskAttribs(stream_type_e str_type, uintmax_t w, uintmax_t h,
+            MaskAttribs(StreamKind strKind, uintmax_t w, uintmax_t h,
+                        uint8_t pix_comps, uint8_t bpp, bool interp, bool m_inverted);
+            MaskAttribs(StreamKind strKind, uintmax_t w, uintmax_t h,
                         uint8_t pix_comps, uint8_t bpp, bool interp, bool m_inverted,
-                        const RGBColor& m_fill, GfxColorSpaceMode fill_cs_mode) :
-                stream_type(str_type), width(w), height(h),
-                num_pixel_comps(pix_comps), bits_per_pixel(bpp),
-                interpolate(interp), invert(m_inverted),
-                fill(m_fill), fill_cspace_mode(fill_cs_mode)
-            { }
+                        const RGBColor& m_fill, GfxColorSpaceMode fill_cs_mode);
 
             stream_type_e stream_type;
             uintmax_t width, height;
@@ -167,7 +157,6 @@ namespace pdftoedn
                   const BoundingBox& b,
                   int img_width, int img_height,
                   const StreamProps& props,
-                  const std::string& img_data,
                   const std::string& img_data_md5,
                   const std::string& filename) :
             res_id(resource_id),

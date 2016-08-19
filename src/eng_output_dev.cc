@@ -15,7 +15,7 @@ namespace pdftoedn
 
     EngOutputDev::~EngOutputDev()
     {
-        delete page_out;
+        delete pg_data;
     }
 
     //
@@ -43,6 +43,8 @@ namespace pdftoedn
     // helper to add annocation links to a page
     void EngOutputDev::create_annot_link(AnnotLink* annot_link)
     {
+        assert(pg_data != NULL && "create_annot_link() - no page storage allocated");
+
         LinkAction* link_action = annot_link->getAction();
 
         // getting bit too many times by NULL pointers that shouldn't be.. ugh
@@ -173,11 +175,11 @@ namespace pdftoedn
 
         if (pdf_link) {
             if (dest) {
-                util::copy_link_meta(*pdf_link, *dest, page_out->height());
+                util::copy_link_meta(*pdf_link, *dest, pg_data->height());
                 delete dest;
             }
 
-            page_out->new_annot_link(pdf_link);
+            pg_data->new_annot_link(pdf_link);
         }
     }
 

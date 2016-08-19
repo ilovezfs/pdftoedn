@@ -47,11 +47,12 @@ namespace pdftoedn
 
         // image blob manipulations
         bool image_is_cached(intmax_t resource_id) const;
+        bool inlined_image_is_cached(const std::string& md5, intmax_t& res_id) const;
         bool cache_image(intmax_t resource_id, const BoundingBox& bbox,
                          int width, int height,
                          const StreamProps& properties,
                          const std::string& data,
-                         intmax_t& id);
+                         const std::string& data_md5);
 
         // text-related methods --
         //
@@ -187,9 +188,6 @@ namespace pdftoedn
         void remove_spans_overlapped_by_span(const PdfText& span);
         void remove_spans_overlapped_by_region(const PdfPath& region);
         intmax_t find_clip_path(PdfDocPath* const path);
-
-        // private image blob search by md5 hash - for inlined images
-        bool image_is_cached(const std::string& md5, intmax_t& res_id) const;
 
         // mark end of text object - triggers pushing of any pending spans
         void mark_end_of_text();

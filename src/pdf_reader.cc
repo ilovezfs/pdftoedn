@@ -238,10 +238,10 @@ namespace pdftoedn
             // process the PDF info on this page
             process_page(eng_odev, page_num);
 
-            const PdfPage* page_output = eng_odev->page_output();
+            const PdfPage* page = eng_odev->page_data();
 
-            if (page_output) {
-                o << *page_output;
+            if (page) {
+                o << *page;
             }
         }
 

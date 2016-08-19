@@ -107,10 +107,10 @@ namespace pdftoedn
 
         // allocate a new page in the collector doc. and register the
         // error callback
-        if (page_out) {
-            delete page_out;
+        if (pg_data) {
+            delete pg_data;
         }
-        page_out = new pdftoedn::PdfPage(pageNum, w, h, rot);
+        pg_data = new pdftoedn::PdfPage(pageNum, w, h, rot);
 
         // finally, update the xref pointer with the font engine
         if (xref) {
@@ -131,7 +131,7 @@ namespace pdftoedn
         DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
 
         // close page collection
-        page_out->finalize();
+        pg_data->finalize();
     }
 
     //
@@ -140,14 +140,14 @@ namespace pdftoedn
     {
         DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
 
-        page_out->push_gfx_state();
+        pg_data->push_gfx_state();
     }
 
     void OutputDev::restoreState(GfxState* state)
     {
         DBG_TRACE(std::cerr << __FUNCTION__ << std::endl);
 
-        page_out->pop_gfx_state();
+        pg_data->pop_gfx_state();
     }
 
 
@@ -189,7 +189,7 @@ namespace pdftoedn
                         0, 0);
 
         // add the font instance w/ associated (rounded) size to the current page
-        page_out->update_font( font, EngOutputDev::get_transformed_font_size(state) );
+        pg_data->update_font( font, EngOutputDev::get_transformed_font_size(state) );
     }
 
 
@@ -280,15 +280,15 @@ namespace pdftoedn
 #endif
 
         // add the character
-        page_out->new_character( x1, y1, w1, h1,
-                                 text_tm,
-                                 TextMetrics( state->getLeading(),
-                                              state->getRise(),
-                                              state->getCharSpace(),
-                                              state->getHorizScaling() ),
-                                 unicode,
-                                 glyph_idx,
-                                 invisible );
+        pg_data->new_character( x1, y1, w1, h1,
+                                text_tm,
+                                TextMetrics( state->getLeading(),
+                                             state->getRise(),
+                                             state->getCharSpace(),
+                                             state->getHorizScaling() ),
+                                unicode,
+                                glyph_idx,
+                                invisible );
     }
 
 
@@ -442,7 +442,7 @@ namespace pdftoedn
             return;
         }
 
-        int ref_num;
+        intmax_t ref_num;
         if (inlined) {
             // inline images don't carry a resource id so the cache
             // lookup will fail every time. Unfortunately, we have to
@@ -454,15 +454,18 @@ namespace pdftoedn
             ref_num = obj->getRef().num;
         }
         else {
-            // this should never happen except, knowing poppler, it's
-            // only a matter of time
+            et.log_error( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+                         "drawImageMask() - non-inlined image has no valid ref_num. Poppler error?" );
             return;
         }
 
         BoundingBox bbox(ctm);
 
-        // lookup the object id to see if we've cached it already
-        if (!page_out->image_is_cached(ref_num))
+        // lookup the object id to see if we've cached it already -
+        // inlined images don't have a ref_num so we stream must be
+        // extracted anyway and the md5 can be used to determine if
+        // it's cached
+        if (inlined || !pg_data->image_is_cached(ref_num))
         {
             // poppler's interface to rip through a stream for an image
             ImageStream *imgStr = new ImageStream(str, width, 1, 1);
@@ -472,14 +475,13 @@ namespace pdftoedn
             state->getFillRGB(&fill);
 
             // set up stream properties
-            StreamProps properties(util::poppler_stream_type_to_edsel(str->getKind()),
-                                   width, height,
+            StreamProps properties(str->getKind(), width, height,
                                    fill, state->getFillColorSpace()->getMode(),
                                    interpolate, ctm.is_upside_down(), inlined, invert);
 
-            DBG_TRACE_IMG( std::cerr << __FUNCTION__ << std::endl
+            DBG_TRACE_IMG( std::cerr << std::endl
                                      << properties << std::endl
-                                     << "\tctm: " << std::endl << PdfTM(state->getCTM())
+                                     << "\tctm: " << std::endl << ctm
                                      << std::endl; );
 
             // extract the data and copy it to a string stream
@@ -491,39 +493,10 @@ namespace pdftoedn
             str->close();
 
             // don't continue if encode failed
-            if (!encode_status) {
+            if (!encode_status ||
+                !process_image_blob(&blob, ctm, bbox, properties, width, height, ref_num)) {
                 return;
             }
-
-            // handle transformations if needed
-            uint8_t transformed = util::xform::XFORM_NONE;
-            std::ostringstream xformed_blob;
-            if (ctm.is_transformed()) {
-                // use leptonica to transform the image
-                transformed = util::xform::transform_image(ctm, blob.str(), width, height, invert, xformed_blob);
-
-                // don't continue if transform failed
-                if (transformed == util::xform::XFORM_ERR) {
-                    return;
-                }
-            }
-
-            // cache it. If inlined, PdfPage will search to make sure
-            // an image w/ same md5 is not already in the DB and
-            // return it's ref_num instead of caching it again.
-            // Otherwise, the same ref_num is returned
-            intmax_t cached_ref_num;
-            if (!page_out->cache_image(ref_num, bbox, width, height, properties,
-                                       (transformed ? xformed_blob.str() : blob.str()),
-                                       cached_ref_num)) {
-                // error caching image
-                return;
-            }
-
-            if (inlined && cached_ref_num == ref_num){
-                inline_img_id -= 1;
-            }
-            ref_num = cached_ref_num;
 
             DUMP_IMG("img_mask");
         }
@@ -534,7 +507,7 @@ namespace pdftoedn
                       );
 
         // add a meta container for the image
-        page_out->new_image(ref_num, bbox);
+        pg_data->new_image(ref_num, bbox);
     }
 
 
@@ -549,10 +522,6 @@ namespace pdftoedn
                                         GfxImageColorMap *maskColorMap,
                                         GBool maskInterpolate)
     {
-        if (!maskColorMap) {
-            return;
-        }
-
         if (state->getFillColorSpace()->isNonMarking()) {
             return;
         }
@@ -565,29 +534,38 @@ namespace pdftoedn
             return;
         }
 
-        intmax_t ref_num = obj->getRef().num;
+        intmax_t ref_num;
+        if (obj && obj->isRef()) {
+            ref_num = obj->getRef().num;
+        }
+        else {
+            et.log_error( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+                          "drawSoftMaskedImage() - image has no valid ref_num. Poppler error?" );
+            return;
+        }
+
         BoundingBox bbox(ctm);
 
         // lookup the object id to see if we've cached it already
-        if (!page_out->image_is_cached(ref_num))
+        if (!pg_data->image_is_cached(ref_num))
         {
-            int num_pix_comps = colorMap->getNumPixelComps();
-            int bpp = colorMap->getBits();
-            StreamProps properties(util::poppler_stream_type_to_edsel(str->getKind()),
-                                   width, height, num_pix_comps, bpp, interpolate,
-                                   util::poppler_stream_type_to_edsel(maskStr->getKind()),
-                                   maskWidth, maskHeight,
-                                   maskColorMap->getNumPixelComps(), maskColorMap->getBits(), maskInterpolate,
+            StreamProps properties(str->getKind(), width, height,
+                                   colorMap, interpolate,
+                                   maskStr->getKind(), maskWidth, maskHeight,
+                                   maskColorMap, maskInterpolate,
                                    ctm.is_upside_down());
 
             DBG_TRACE_IMG(std::cerr << __FUNCTION__ << std::endl
                                     << properties << std::endl
-                                    << "           c-space: " << GfxColorSpace::getColorSpaceModeName(colorMap->getColorSpace()->getMode())
-                                    << "      mask c-space: " << GfxColorSpace::getColorSpaceModeName(maskColorMap->getColorSpace()->getMode())
+                                    << "           c-space: "
+                                    << GfxColorSpace::getColorSpaceModeName(colorMap->getColorSpace()->getMode())
+                                    << "      mask c-space: "
+                                    << GfxColorSpace::getColorSpaceModeName(maskColorMap->getColorSpace()->getMode())
                                     << std::endl);
 
             // poppler's interface to rip through a stream for an image
-            ImageStream *imgStr = new ImageStream(str, width, num_pix_comps, bpp);
+            ImageStream *imgStr = new ImageStream(str, width, colorMap->getNumPixelComps(),
+                                                  colorMap->getBits());
             ImageStream *maskImgStr = new ImageStream(maskStr, maskWidth,
                                                       maskColorMap->getNumPixelComps(),
                                                       maskColorMap->getBits());
@@ -605,26 +583,9 @@ namespace pdftoedn
             str->close();
 
             // don't continue if encode failed
-            if (!encode_status) {
-                return;
-            }
-
-            // handle transformations if needed
-            uint8_t transformed = util::xform::XFORM_NONE;
-            std::ostringstream xformed_blob;
-            if (ctm.is_transformed()) {
-                transformed = util::xform::transform_image(ctm, blob.str(), width, height, false, xformed_blob);
-
-                // don't continue if transform failed
-                if (transformed == util::xform::XFORM_ERR) {
-                    return;
-                }
-            }
-
-            // cache it.
-            if (!page_out->cache_image(ref_num, bbox, width, height, properties,
-                                       (transformed ? xformed_blob.str() : blob.str()),
-                                       ref_num)) {
+            if (!encode_status ||
+                !process_image_blob(&blob, ctm, bbox, properties, width, height,
+                                    ref_num)) {
                 return;
             }
 
@@ -632,7 +593,7 @@ namespace pdftoedn
         }
 
         // add a meta container for the image
-        page_out->new_image(ref_num, bbox);
+        pg_data->new_image(ref_num, bbox);
     }
 
 
@@ -663,10 +624,6 @@ namespace pdftoedn
     {
         DBG_TRACE_IMG(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
 
-        if (!maskStr) {
-            return;
-        }
-
         if (state->getFillColorSpace()->isNonMarking()) {
             return;
         }
@@ -679,26 +636,35 @@ namespace pdftoedn
             return;
         }
 
-        intmax_t ref_num = obj->getRef().num;
+        intmax_t ref_num;
+        if (obj && obj->isRef()) {
+            ref_num = obj->getRef().num;
+        }
+        else {
+            et.log_error( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+                          "drawMaskedImage() - image has no valid ref_num. Poppler error?" );
+            return;
+        }
+
         BoundingBox bbox(ctm);
 
         // lookup the object id to see if we've cached it already
-        if (!page_out->image_is_cached(ref_num))
+        if (!pg_data->image_is_cached(ref_num))
         {
-            int num_pix_comps = colorMap->getNumPixelComps();
-            int bpp = colorMap->getBits();
-            StreamProps properties(util::poppler_stream_type_to_edsel(str->getKind()), width, height,
-                                   num_pix_comps, bpp, interpolate,
-                                   util::poppler_stream_type_to_edsel(maskStr->getKind()), maskWidth, maskHeight,
+            StreamProps properties(str->getKind(), width, height,
+                                   colorMap, interpolate,
+                                   maskStr->getKind(), maskWidth, maskHeight,
                                    ctm.is_upside_down(), maskInterpolate, maskInvert);
 
             DBG_TRACE_IMG(std::cerr << __FUNCTION__ << std::endl
                                     << properties << std::endl
-                                    << ", cspace: " << GfxColorSpace::getColorSpaceModeName(colorMap->getColorSpace()->getMode())
+                                    << ", cspace: "
+                                    << GfxColorSpace::getColorSpaceModeName(colorMap->getColorSpace()->getMode())
                                     << std::endl);
 
             // poppler's interface to rip through a stream for an image
-            ImageStream *imgStr = new ImageStream(str, width, num_pix_comps, bpp);
+            ImageStream *imgStr = new ImageStream(str, width, colorMap->getNumPixelComps(),
+                                                  colorMap->getBits());
             ImageStream *maskImgStr = new ImageStream(maskStr, maskWidth, 1, 1);
 
             // image data will be written here
@@ -715,26 +681,9 @@ namespace pdftoedn
             str->close();
 
             // don't continue if encode failed
-            if (!encode_status) {
-                return;
-            }
-
-            // handle transformations if needed
-            uint8_t transformed = util::xform::XFORM_NONE;
-            std::ostringstream xformed_blob;
-            if (ctm.is_transformed()) {
-                transformed = util::xform::transform_image(ctm, blob.str(), width, height, maskInvert, xformed_blob);
-
-                // don't continue if transform failed
-                if (transformed == util::xform::XFORM_ERR) {
-                    return;
-                }
-            }
-
-            // cache it.
-            if (!page_out->cache_image(ref_num, bbox, width, height, properties,
-                                       (transformed ? xformed_blob.str() : blob.str()),
-                                       ref_num)) {
+            if (!encode_status ||
+                !process_image_blob(&blob, ctm, bbox, properties, width, height,
+                                    ref_num)) {
                 return;
             }
 
@@ -742,7 +691,7 @@ namespace pdftoedn
         }
 
         // add a meta container for the image
-        page_out->new_image(ref_num, bbox);
+        pg_data->new_image(ref_num, bbox);
     }
 
 
@@ -765,7 +714,7 @@ namespace pdftoedn
         }
 
         // get object reference id
-        int ref_num;
+        intmax_t ref_num;
         if (inlined) {
             // inline images don't carry a resource id so the cache
             // lookup will fail every time. Unfortunately, we have to
@@ -777,25 +726,29 @@ namespace pdftoedn
             ref_num = obj->getRef().num;
         }
         else {
-            // WTF!
+            et.log_error( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+                          "drawImage() - non-inlined image has no valid ref_num. Poppler error?" );
             return;
         }
 
         BoundingBox bbox(ctm);
 
-        // lookup the object id to see if we've cached it already
-        if (!page_out->image_is_cached(ref_num))
+        // lookup the object id to see if we've cached it already -
+        // inlined images don't have a ref_num so we stream must be
+        // extracted anyway and the md5 can be used to determine if
+        // it's cached
+        if (inlined || !pg_data->image_is_cached(ref_num))
         {
             int num_pix_comps = colorMap->getNumPixelComps();
             int bpp = colorMap->getBits();
-            StreamProps properties(util::poppler_stream_type_to_edsel(str->getKind()),
-                                   width, height, num_pix_comps, bpp,
+            StreamProps properties(str->getKind(), width, height,
+                                   num_pix_comps, bpp,
                                    interpolate, ctm.is_upside_down(), inlined);
 
             DBG_TRACE_IMG(std::cerr << __FUNCTION__ << std::endl
                                     << properties << std::endl
                                     << "mask colors? " << (maskColors != NULL) << std::endl
-                                    << " ctm: " << std::endl << PdfTM(state->getCTM())
+                                    << " ctm: " << std::endl << ctm
                                     << std::endl);
 
             // poppler's interface to rip through a stream for an image
@@ -809,45 +762,68 @@ namespace pdftoedn
             delete imgStr;
             str->close();
 
-            if (!encode_status) {
+            if (!encode_status ||
+                !process_image_blob(&blob, ctm, bbox, properties, width, height,
+                                    ref_num)) {
                 return;
             }
-
-            // handle transformations if needed
-            uint8_t transformed = util::xform::XFORM_NONE;
-            std::ostringstream xformed_blob;
-            if (ctm.is_transformed()) {
-                transformed = util::xform::transform_image(ctm, blob.str(), width, height, false, xformed_blob);
-                //                std::cerr << "image transformed. adjusted bbox:" << std::endl << bbox << std::endl;
-
-                // don't continue if transform failed
-                if (transformed == util::xform::XFORM_ERR) {
-                    return;
-                }
-            }
-
-            // cache it. If inlined, PdfPage will search to make sure
-            // an image w/ same md5 is not already in the DB and
-            // return it's ref_num instead of caching it again.
-            // Otherwise, the same ref_num is returned
-            intmax_t cached_ref_num;
-            if (!page_out->cache_image(ref_num, bbox, width, height, properties,
-                                       (transformed ? xformed_blob.str() : blob.str()),
-                                       cached_ref_num)) {
-                // error caching image
-                return;
-            }
-
-            if (inlined && cached_ref_num == ref_num){
-                inline_img_id -= 1;
-            }
-            ref_num = cached_ref_num;
 
             DUMP_IMG("img");
         }
 
         // add a meta container for the image
-        page_out->new_image(ref_num, bbox);
+        pg_data->new_image(ref_num, bbox);
+    }
+
+
+    //
+    // transform the encoded image if needed, then cache it
+    bool OutputDev::process_image_blob(const std::ostringstream* blob, const PdfTM& ctm,
+                                       const BoundingBox& bbox, const StreamProps& properties,
+                                       int width, int height,
+                                       intmax_t& ref_num)
+    {
+        // handle transformations if needed
+        std::ostringstream xformed_blob;
+        if (ctm.is_transformed()) {
+            if (util::xform::transform_image(ctm, blob->str(), width, height,
+                                             properties.mask_is_inverted(),
+                                             xformed_blob) == util::xform::XFORM_NONE) {
+                // don't continue if transform failed
+                return false;
+            }
+            blob = &xformed_blob;
+        }
+
+        std::string data_md5 = util::md5(blob->str());
+
+        // we've seen instances of repeated usage of inlined streams
+        // so we cache them and search the cache by md5
+        if (properties.is_inlined()) {
+            // If inlined, PdfPage will search to make sure an image
+            // w/ same md5 is not already in the DB and return its
+            // ref_num instead of caching it again.  Otherwise, the
+            // same ref_num is returned
+            intmax_t cached_res_id;
+            if (pg_data->inlined_image_is_cached(data_md5, cached_res_id)) {
+                // return the resource id found
+                ref_num = cached_res_id;
+                return true;
+            }
+
+            // decrement the custom assigned inline_img_id for
+            // the next instance
+            inline_img_id -= 1;
+        }
+
+        // cache it - cache_image()
+        if (!pg_data->cache_image(ref_num, bbox, width, height, properties,
+                                  blob->str(), data_md5)) {
+            // error caching image
+            return false;
+        }
+
+        return true;
     }
 
 
@@ -859,7 +835,7 @@ namespace pdftoedn
 
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
 
-        assert((page_out != NULL) && "updateAll: PdfPage instance has not been allocated" );
+        assert((pg_data != NULL) && "updateAll: PdfPage instance has not been allocated" );
     }
 
     //
@@ -884,12 +860,12 @@ namespace pdftoedn
             line_dash.push_back( dashStart );
 
             // followed by the pattern
-            for (int i = 0; i < dashLength; ++i) {
+            for (intmax_t i = 0; i < dashLength; ++i) {
                 line_dash.push_back( dashPattern[i] );
             }
         }
 
-        page_out->update_line_dash(line_dash);
+        pg_data->update_line_dash(line_dash);
     }
 
 
@@ -899,7 +875,7 @@ namespace pdftoedn
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getLineJoin() << " ---- + " << std::endl);
 
-        page_out->update_line_join(state->getLineJoin());
+        pg_data->update_line_join(state->getLineJoin());
     }
 
     //
@@ -908,7 +884,7 @@ namespace pdftoedn
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getLineCap() << " ---- + " << std::endl);
 
-        page_out->update_line_cap(state->getLineCap());
+        pg_data->update_line_cap(state->getLineCap());
     }
 
     //
@@ -917,7 +893,7 @@ namespace pdftoedn
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getMiterLimit() << " ---- + " << std::endl);
 
-        page_out->update_miter_limit(state->getMiterLimit());
+        pg_data->update_miter_limit(state->getMiterLimit());
     }
 
     //
@@ -931,7 +907,7 @@ namespace pdftoedn
         PdfTM ctm(c[0], c[1], c[2], c[3], 0, 0);
         Coord p = ctm.transform(state->getLineWidth(), state->getLineWidth());
 
-        page_out->update_line_width( std::min(std::abs(p.x), std::abs(p.y)) );
+        pg_data->update_line_width( std::min(std::abs(p.x), std::abs(p.y)) );
     }
 
     //
@@ -967,7 +943,7 @@ namespace pdftoedn
 
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << RGBColor(rgb.r, rgb.g, rgb.b) << " ---- + " << std::endl);
 
-        page_out->update_fill_color(rgb.r, rgb.g, rgb.b);
+        pg_data->update_fill_color(rgb.r, rgb.g, rgb.b);
     }
 
     //
@@ -979,7 +955,7 @@ namespace pdftoedn
 
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ":" << RGBColor(rgb.r, rgb.g, rgb.b) << " ---- + " << std::endl);
 
-        page_out->update_stroke_color(rgb.r, rgb.g, rgb.b);
+        pg_data->update_stroke_color(rgb.r, rgb.g, rgb.b);
     }
 
 
@@ -987,42 +963,42 @@ namespace pdftoedn
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << util::debug::get_blend_mode_str(state->getBlendMode()) << " ---- + " << std::endl);
 
-        page_out->update_blend_mode(util::pdf_to_svg_blend_mode(state->getBlendMode()));
+        pg_data->update_blend_mode(util::pdf_to_svg_blend_mode(state->getBlendMode()));
     }
 
     void OutputDev::updateFillOpacity(GfxState *state)
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getFillOpacity() << " ---- + " << std::endl);
 
-        page_out->update_fill_opacity(state->getFillOpacity());
+        pg_data->update_fill_opacity(state->getFillOpacity());
     }
 
     void OutputDev::updateStrokeOpacity(GfxState *state)
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__  << ": " << state->getStrokeOpacity() << " ---- + " << std::endl);
 
-        page_out->update_stroke_opacity(state->getStrokeOpacity());
+        pg_data->update_stroke_opacity(state->getStrokeOpacity());
     }
 
     void OutputDev::updateFillOverprint(GfxState *state)
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getFillOverprint() << " ---- + " << std::endl);
 
-        page_out->update_fill_overprint(state->getFillOverprint());
+        pg_data->update_fill_overprint(state->getFillOverprint());
     }
 
     void OutputDev::updateStrokeOverprint(GfxState *state)
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getStrokeOverprint() << " ---- + " << std::endl);
 
-        page_out->update_stroke_overprint(state->getStrokeOverprint());
+        pg_data->update_stroke_overprint(state->getStrokeOverprint());
     }
 
     void OutputDev::updateOverprintMode(GfxState *state)
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << state->getOverprintMode() << " ---- + " << std::endl);
 
-        page_out->update_overprint_mode(state->getOverprintMode());
+        pg_data->update_overprint_mode(state->getOverprintMode());
     }
 
     //
@@ -1144,7 +1120,7 @@ namespace pdftoedn
             return;
         }
 
-        page_out->add_path(state, type, eo_flag);
+        pg_data->add_path(state, type, eo_flag);
     }
 
 } // namespace

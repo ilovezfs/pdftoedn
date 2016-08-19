@@ -1,6 +1,8 @@
 #include <poppler/GfxState.h>
+#include <poppler/Stream.h>
 
 #include "image.h"
+#include "util.h"
 #include "util_edn.h"
 
 namespace pdftoedn
@@ -66,6 +68,35 @@ namespace pdftoedn
     // =============================================
     // PDF image stream properties
     //
+    StreamProps::BitmapAttribs::BitmapAttribs(StreamKind strKind, uint32_t w, uint32_t h,
+                                              uint8_t num_comps, uint8_t bpp, bool interp) :
+        stream_type(util::poppler_stream_type_to_edsel(strKind)), width(w), height(h),
+        num_pixel_comps(num_comps), bits_per_pixel(bpp),
+        interpolate(interp)
+    {}
+
+
+    StreamProps::MaskAttribs::MaskAttribs(StreamKind strKind, uintmax_t w, uintmax_t h,
+                                          uint8_t pix_comps, uint8_t bpp,
+                                          bool interp, bool m_inverted) :
+        stream_type(util::poppler_stream_type_to_edsel(strKind)),
+        width(w), height(h),
+        num_pixel_comps(pix_comps), bits_per_pixel(bpp),
+        interpolate(interp), invert(m_inverted)
+    { }
+
+    StreamProps::MaskAttribs::MaskAttribs(StreamKind strKind, uintmax_t w, uintmax_t h,
+                                          uint8_t pix_comps, uint8_t bpp, bool interp, bool m_inverted,
+                                          const RGBColor& m_fill, GfxColorSpaceMode fill_cs_mode) :
+        stream_type(util::poppler_stream_type_to_edsel(strKind)),
+        width(w), height(h),
+        num_pixel_comps(pix_comps), bits_per_pixel(bpp),
+        interpolate(interp), invert(m_inverted),
+        fill(m_fill), fill_cspace_mode(fill_cs_mode)
+    { }
+
+    //
+    // EDN output
     std::ostream& StreamProps::to_edn(std::ostream& o) const
     {
         util::edn::Hash props_h(5);
