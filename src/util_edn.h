@@ -1,7 +1,30 @@
 #pragma once
 
 #include <vector>
+
+#ifdef CHECK_CAP_CHANGE
+#include <iostream>
+#include <assert.h>
+// just something to make sure sized EDN vectors and hashes don't
+// realloc
+#define TRACE_CAPACITY_CHANGE( push ) {                       \
+        uintmax_t c1 = elems->capacity();                     \
+        push;                                                 \
+        uintmax_t c2 = elems->capacity();                     \
+        bool container_cap_changed = (c1 != c2 &&             \
+                                      (c1 != 0 && c2 != 1));  \
+        if (container_cap_changed) {                          \
+            std::cerr << "CAP changed from " << c1 << " to "  \
+                      << c2 << std::endl;                     \
+            assert(container_cap_changed);                    \
+        }                                                     \
+    }
+#else
+#define TRACE_CAPACITY_CHANGE( push ) push;
+#endif
+
 #include "base_types.h"
+
 
 namespace pdftoedn {
     namespace util {
@@ -75,16 +98,15 @@ namespace pdftoedn {
                 }
 
             protected:
-#ifdef CHECK_CAP_CHANGE
-                void push_elem(const T& n);
-#else
                 void push_elem(const T& n) {
                     if (!elems) {
                         elems = new std::vector<T>;
                     }
+                    TRACE_CAPACITY_CHANGE(
                     elems->push_back(n);
+                    );
                 }
-#endif
+
             private:
                 std::vector<T>* elems;
 

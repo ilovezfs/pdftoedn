@@ -1,5 +1,6 @@
 # what flags you want to pass to the C compiler & linker
 AM_CXXFLAGS = \
+    $(PDFTOEDN_BUILD_CPPFLAGS) \
     $(BOOST_CXXFLAGS) \
     $(POPPLER_PARENT_INCLUDE) \
     $(poppler_CFLAGS) \
@@ -61,3 +62,7 @@ if LOCAL_MD5
 # include md5 code if openssl was not found
 pdftoedn_SOURCES += bzflag_md5.cc
 endif
+
+# got bit by a leftover config.h in the src directory so rm -f
+clean-local:
+	-rm -f config.h config.log config.status

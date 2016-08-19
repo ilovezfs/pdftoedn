@@ -2,6 +2,10 @@
 #pragma implementation
 #endif
 
+#include <list>
+#include <sstream>
+#include <assert.h>
+
 #include <poppler/Error.h>
 #include <poppler/Object.h>
 #include <poppler/GfxFont.h>
@@ -835,10 +839,7 @@ namespace pdftoedn
 
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
 
-        if (!page_out) {
-            et.log_critical( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
-                             "updateAll: PdfPage instance has not been allocated" );
-        }
+        assert((page_out != NULL) && "updateAll: PdfPage instance has not been allocated" );
     }
 
     //

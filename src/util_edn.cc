@@ -3,9 +3,7 @@
 #include <algorithm>
 #include <ostream>
 #include <vector>
-
-//#define CHECK_CAP_CHANGE
-//#define RUBY_FORMATTED_DECIMALS
+#include <assert.h>
 
 #include "base_types.h"
 #include "util_edn.h"
@@ -70,7 +68,9 @@ namespace pdftoedn
                       case UVAL_STRING: delete val.str; break;
                       case UVAL_OBJ:    delete val.obj; break;
                       default:
-                          std::cerr << "ERROR DELETING NODE OF TYPE " << type << std::endl;
+                          std::cerr << "ERROR: attempt to delete node of type: "
+                                    << type << std::endl;
+                          assert(0 && "EDNNode cleanup error");
                           break;
                     }
                 }
@@ -81,26 +81,7 @@ namespace pdftoedn
                   case UVAL_BOOL:   o << std::boolalpha << val.b;   break;
                   case UVAL_UINT:   o << std::dec << val.ui;        break;
                   case UVAL_INT:    o << std::dec << val.i;         break;
-#ifdef RUBY_FORMATTED_DECIMALS
-                  case UVAL_DOUBLE:
-                      {
-                          double ip;
-                          if (modf(val.d, &ip) == 0.0) {
-                              o << std::dec << (intmax_t) val.d << ".0";
-                          }
-                          else
-                          {
-                              std::streamsize p = o.precision();
-                              o.precision(17);
-                              o << std::dec << val.d;
-                              o.precision(p);
-                          }
-                          break;
-                      }
-#else
                   case UVAL_DOUBLE: o << std::dec << val.d;         break;
-#endif
-
                   case UVAL_OBJ:    o << *(val.obj);                break;
                   case UVAL_STRING:
                       o << '"';
@@ -117,7 +98,7 @@ namespace pdftoedn
                       o << '"';
                       break;
                   default:
-                      std::cerr << "attempt to output UNDEF node" << std::endl;
+                      assert(0 && "attempt to output UNDEF node");
                       break;
                 }
                 return o;
@@ -146,22 +127,6 @@ namespace pdftoedn
                 o << close_chars();
                 return o;
             }
-
-#ifdef CHECK_CAP_CHANGE
-            template <class T>
-            void Container<T>::push_elem(const T& n)
-            {
-                if (!elems) {
-                    elems = new std::vector<T>;
-                }
-                uintmax_t c1 = elems->capacity();
-                elems->push_back(n);
-                uintmax_t c2 = elems->capacity();
-                if (c1 != c2 && (c1 != 0 && c2 != 1)) {
-                    std::cerr << "CAP changed from " << c1 << " to " << c2 << std::endl;
-                }
-            }
-#endif
 
             // =============================================
             // Hash's push cerates the pair to be stored
