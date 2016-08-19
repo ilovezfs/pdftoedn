@@ -1,27 +1,4 @@
-# what flags you want to pass to the C compiler & linker
-AM_CXXFLAGS = \
-    $(PDFTOEDN_BUILD_CPPFLAGS) \
-    $(BOOST_CXXFLAGS) \
-    $(POPPLER_PARENT_INCLUDE) \
-    $(poppler_CFLAGS) \
-    $(freetype2_CFLAGS) \
-    $(png_CFLAGS) \
-    $(lept_CFLAGS) \
-    $(OPENSSL_INCLUDES)
-
-AM_LDFLAGS = \
-    $(BOOST_LDFLAGS) \
-    $(OPENSSL_LDFLAGS)
-
-pdftoedn_LDADD =  \
-    $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB) $(BOOST_LOCALE_LIB) $(BOOST_PROGRAM_OPTIONS_LIB) $(BOOST_REGEX_LIB) \
-    $(poppler_LIBS) $(poppler_cpp_LIBS) \
-    $(freetype2_LIBS) \
-    $(png_LIBS) \
-    $(lept_LIBS) \
-    $(OPENSSL_LIBS)
-
-
+AUTOMAKE_OPTIONS = subdir-objects
 
 # this lists the binaries to produce, the (non-PHONY, binary) targets in
 # the previous manual Makefile
@@ -60,8 +37,36 @@ pdftoedn_SOURCES = \
 
 if LOCAL_MD5
 # include md5 code if openssl was not found
-pdftoedn_SOURCES += bzflag_md5.cc
+pdftoedn_SOURCES += external/bzflag_md5.cc
 endif
+
+if LOCAL_OPEN_MEMSTREAM
+# include http://piumarta.com/software/memstream/
+pdftoedn_SOURCES += external/memstream.c
+endif
+
+# what flags you want to pass to the C compiler & linker
+AM_CXXFLAGS = \
+    $(PDFTOEDN_BUILD_CPPFLAGS) \
+    $(BOOST_CXXFLAGS) \
+    $(POPPLER_PARENT_INCLUDE) \
+    $(poppler_CFLAGS) \
+    $(freetype2_CFLAGS) \
+    $(png_CFLAGS) \
+    $(lept_CFLAGS) \
+    $(OPENSSL_INCLUDES)
+
+AM_LDFLAGS = \
+    $(BOOST_LDFLAGS) \
+    $(OPENSSL_LDFLAGS)
+
+pdftoedn_LDADD =  \
+    $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB) $(BOOST_LOCALE_LIB) $(BOOST_PROGRAM_OPTIONS_LIB) $(BOOST_REGEX_LIB) \
+    $(poppler_LIBS) $(poppler_cpp_LIBS) \
+    $(freetype2_LIBS) \
+    $(png_LIBS) \
+    $(lept_LIBS) \
+    $(OPENSSL_LIBS)
 
 # got bit by a leftover config.h in the src directory so rm -f
 clean-local:

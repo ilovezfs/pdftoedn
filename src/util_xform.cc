@@ -1,10 +1,4 @@
 #include <string>
-#ifndef __linux
-#include <unistd.h>
-#include <cerrno>
-#include <cstring>
-#include <fstream>
-#endif
 #include <sstream>
 #include <leptonica/allheaders.h>
 
@@ -27,6 +21,8 @@ namespace pdftoedn
     {
         namespace xform
         {
+            static const char* MODULE = "ImageXform";
+
             // =======================================================================
             // new trace control API as of Leptonica 1.71. Mute them all
             //
@@ -36,16 +32,6 @@ namespace pdftoedn
                 return true;
             }
 
-#ifndef __linux
-            //
-            // two utility functions to read / write images using
-            // files in tmp. Leptonica relies on open_memstream which
-            // is not implemented in all OSs
-            static const std::string TMPFILE_TEMPLATE = "dl.XXXXXX";
-            static PIX* edsel_pixReadPng(const std::string& blob);
-            static bool edsel_pixWritePng(std::ostringstream& blob, PIX* p);
-#endif
-
             // =======================================================================
             //
             // transform image data and recompute bounding box
@@ -54,27 +40,15 @@ namespace pdftoedn
                                     std::ostringstream& xformed_blob)
             {
                 uint8_t ops = XFORM_NONE;
-
-                if (!image_ctm.is_transformed()) {
-                    return ops;
-                }
-
-                PIX* p;
                 PdfTM ctm(image_ctm);
-
-#ifdef __linux
-                p = pixReadMemPng((l_uint8*) blob.c_str(), blob.length());
-#else // no memopen support
-                p = edsel_pixReadPng(blob);
-#endif
-
+                PIX* p = pixReadMemPng(reinterpret_cast<const l_uint8*>(blob.c_str()),
+                                       blob.length());
                 if (!p) {
                     et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE,
-                                     "transform_image - error reading image data");
-                    return ops;
+                                     "pixReadMemPng() error reading image data");
+                    return XFORM_ERR;
                 }
 
-                bool status = true;
                 PIX* p2 = NULL;
 
                 DBG_TRACE(std::cerr << std::endl<< "\tXFORM === w: " << width << ", h: " << height << std::endl);
@@ -86,6 +60,7 @@ namespace pdftoedn
 
                     DBG_TRACE(std::cerr << "\trotation - ");
 
+                    // leptonica has optimized orthogonal rotation operations
                     if (angle_d == 180) {
                         p2 = pixRotate180(NULL, p);
 
@@ -110,6 +85,11 @@ namespace pdftoedn
                         DBG_TRACE(std::cerr << "270 deg" << std::endl);
                     }
                     else {
+                        // arbitrary angle - note that this will
+                        // affect the width & height of the resulting
+                        // pixmap and this might likely affect the
+                        // output in the user viewport if the angle is
+                        // significant
                         double angle = ctm.rotation_deg();
                         p2 = pixRotate(p,  PdfTM::deg_to_rad(angle), L_ROTATE_SAMPLING,
                                        inverted_mask ? L_BRING_IN_BLACK : L_BRING_IN_WHITE,
@@ -117,6 +97,15 @@ namespace pdftoedn
 
                         ops |= XFORM_ROT_ARB;
                         DBG_TRACE(std::cerr << angle << " deg" << std::endl);
+                    }
+
+                    // check if the rotation failed
+                    if (!p2) {
+                        std::stringstream s;
+                        s << "pixRotate[XX]() op failed for " << angle_d << " degrees";
+                        et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE, s.str() );
+                        pixDestroy(&p);
+                        return XFORM_ERR;
                     }
 
                     pixDestroy(&p);
@@ -128,6 +117,13 @@ namespace pdftoedn
                 if (ctm.is_flipped()) {
                     p2 = pixFlipLR(NULL, p);
                     pixDestroy(&p);
+
+                    if (!p2) {
+                        et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE,
+                                         "pixFlipLR() failed");
+                        return XFORM_ERR;
+                    }
+
                     p = p2;
                     p2 = NULL;
 
@@ -135,9 +131,17 @@ namespace pdftoedn
                     ops |= XFORM_FLIP_H;
                     DBG_TRACE(std::cerr << "\tis flipped " << std::endl);
                 }
+
                 if (ctm.is_upside_down()) {
                     p2 = pixFlipTB(NULL, p);
                     pixDestroy(&p);
+
+                    if (!p2) {
+                        et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE,
+                                         "pixFlipTB() failed");
+                        return XFORM_ERR;
+                    }
+
                     p = p2;
                     p2 = NULL;
 
@@ -166,32 +170,30 @@ namespace pdftoedn
                     ops |= ((ratio_r > 0) ? XFORM_SCALE_H : XFORM_SCALE_V);
                 }
 
+                // get the dimensions of the resulting pixmap
                 width = pixGetWidth(p);
                 height = pixGetHeight(p);
+                int depth = pixGetDepth(p);
 
-#ifdef __linux
-                {
-                    int depth = pixGetDepth(p);
+                DBG_TRACE(std::cerr << "\tnew w: " << width << ", new h: " << height
+                          << ", depth: " << depth << std::endl;);
 
-                    DBG_TRACE(std::cerr << "\tnew w: " << width << ", new h: " << height << ", depth: " << depth << std::endl);
+                // write it to a PNG - TODO: optimize to directly write to disk instead
+                size_t size = width * height * depth; //blob.length();     // TODO: check size
+                l_uint8* data = new l_uint8[size];
 
-                    // TODO: check size
-                    size_t size = width * height * depth; //blob.length();
-                    l_uint8* data = new l_uint8[size];
-
-                    pixWriteMemPng(&data, &size, p, 0);
-                    xformed_blob.write((const char*) data, size);
-
-                    delete [] data;
+                if (pixWriteMemPng(&data, &size, p, 0) == 0) {
+                    xformed_blob.write(reinterpret_cast<const char*>(data), size);
                 }
-#else
-
-                DBG_TRACE(std::cerr << "\tnew w: " << width << ", new h: " << height << std::endl);
-
-                status = edsel_pixWritePng(xformed_blob, p);
-#endif
+                else {
+                    et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE,
+                                     "pixWriteMemPng() failed to write PNG");
+                    ops = XFORM_ERR;
+                }
 
                 // cleanup
+                delete [] data;
+
                 if (p) {
                     pixDestroy(&p);
                 }
@@ -199,129 +201,8 @@ namespace pdftoedn
                     pixDestroy(&p2);
                 }
 
-                if (!status) {
-                    // error
-                    ops = XFORM_NONE;
-                }
                 return ops;
             }
-
-#ifndef __linux
-            //
-            // two utility functions to read / write images using
-            // files in tmp. Leptonica relies on open_memstream which
-            // is not implemented in all OSs
-            static PIX* edsel_pixReadPng(const std::string& blob)
-            {
-                char tmpname[32];
-                strncpy(tmpname, TMPFILE_TEMPLATE.c_str(), TMPFILE_TEMPLATE.length() + 1);
-
-                errno = 0;
-                int fp = mkstemp(tmpname);
-                if (fp == -1) {
-                    std::stringstream err;
-                    err << __FUNCTION__ << " - mkstemp failed to create temp file " << tmpname
-                        << " (errno: " << strerror(errno) << ")";
-                    et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE, err.str() );
-                    return NULL;
-                }
-
-                std::ofstream tmp;
-                tmp.open(tmpname, std::ios::binary);
-
-                if (!tmp.is_open()) {
-                    return NULL;
-                }
-
-                tmp.write(blob.c_str(), blob.length());
-                tmp.close();
-
-                PIX* p = pixRead(tmpname);
-                close(fp);
-                unlink(tmpname);
-                return p;
-            }
-
-            //
-            // a bit annoying because we have to write the PNG data to
-            // a file and THEN open it and read it back
-            static bool edsel_pixWritePng(std::ostringstream& blob, PIX* p)
-            {
-                bool status = true;
-                int fp = 0;
-                char tmpname[32];
-
-                do
-                {
-                    strncpy(tmpname, TMPFILE_TEMPLATE.c_str(), TMPFILE_TEMPLATE.length() + 1);
-
-                    errno = 0;
-                    fp = mkstemp(tmpname);
-                    if (fp == -1) {
-                        std::stringstream err;
-                        err << __FUNCTION__ << " - mkstemp failed to create temp file " << tmpname
-                            << " (" << strerror(errno) << ")";
-                        et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE, err.str() );
-
-                        DBG_TRACE(std::cerr << err.str() << std::endl);
-
-                        return false;
-                    }
-
-                    // write the PNG data to the tmp file
-                    if (pixWrite(tmpname, p, IFF_PNG) != 0) {
-                        status = false;
-
-                        std::stringstream err;
-                        err << __FUNCTION__ << " - pixWrite() failed to write image data ("
-                            << tmpname << ")";
-                        et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE, err.str() );
-
-                        DBG_TRACE(std::cerr << err.str() << std::endl);
-
-                        break;
-                    }
-
-                    // open it for reading
-                    std::ifstream tmp(tmpname, std::ifstream::in | std::ifstream::binary);
-                    if (!tmp.is_open()) {
-                        status = false;
-
-                        std::stringstream err;
-                        err << __FUNCTION__ << " - failed to open tmp file " << tmpname;
-                        et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE, err.str() );
-
-                        DBG_TRACE(std::cerr << err.str() << std::endl);
-
-                        break;
-                    }
-
-                    // determine the size
-                    tmp.seekg (0, std::ios::end);
-                    size_t size = tmp.tellg();
-
-                    // std::cerr << "file size is: " << size << std::endl;
-                    char *memblock = new char[size];
-                    tmp.seekg(0, std::ios::beg);
-                    tmp.read(memblock, size);
-                    tmp.close();
-
-                    // write the data into the ostringstream
-                    blob.write(memblock, size);
-                    // util::debug::save_blob_to_disk(blob, "-wrote-img");
-
-                    // cleanup
-                    delete[] memblock;
-
-                } while (0);
-
-                if (fp) {
-                    close(fp);
-                    unlink(tmpname);
-                }
-                return status;
-            }
-#endif
         } // namespace xform
     } // namespace util
 } // namespace

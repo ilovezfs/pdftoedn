@@ -501,6 +501,11 @@ namespace pdftoedn
             if (ctm.is_transformed()) {
                 // use leptonica to transform the image
                 transformed = util::xform::transform_image(ctm, blob.str(), width, height, invert, xformed_blob);
+
+                // don't continue if transform failed
+                if (transformed == util::xform::XFORM_ERR) {
+                    return;
+                }
             }
 
             // cache it. If inlined, PdfPage will search to make sure
@@ -609,6 +614,11 @@ namespace pdftoedn
             std::ostringstream xformed_blob;
             if (ctm.is_transformed()) {
                 transformed = util::xform::transform_image(ctm, blob.str(), width, height, false, xformed_blob);
+
+                // don't continue if transform failed
+                if (transformed == util::xform::XFORM_ERR) {
+                    return;
+                }
             }
 
             // cache it.
@@ -714,6 +724,11 @@ namespace pdftoedn
             std::ostringstream xformed_blob;
             if (ctm.is_transformed()) {
                 transformed = util::xform::transform_image(ctm, blob.str(), width, height, maskInvert, xformed_blob);
+
+                // don't continue if transform failed
+                if (transformed == util::xform::XFORM_ERR) {
+                    return;
+                }
             }
 
             // cache it.
@@ -804,6 +819,11 @@ namespace pdftoedn
             if (ctm.is_transformed()) {
                 transformed = util::xform::transform_image(ctm, blob.str(), width, height, false, xformed_blob);
                 //                std::cerr << "image transformed. adjusted bbox:" << std::endl << bbox << std::endl;
+
+                // don't continue if transform failed
+                if (transformed == util::xform::XFORM_ERR) {
+                    return;
+                }
             }
 
             // cache it. If inlined, PdfPage will search to make sure

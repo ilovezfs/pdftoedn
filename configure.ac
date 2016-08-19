@@ -11,32 +11,31 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_CONFIG_MACRO_DIR([m4])
 
-# check to enable debug flags
+dnl check to enable debug flags
 AX_CHECK_ENABLE_DEBUG([no])
 
 if test "x$ax_enable_debug" = "xyes"; then
-# add some internal debug defines
+   dnl add some internal debug defines
    PDFTOEDN_BUILD_CPPFLAGS="-DCHECK_CAP_CHANGE"
 fi
 AC_SUBST([PDFTOEDN_BUILD_CPPFLAGS])
 
-# Checks for programs.
+dnl Checks for programs.
 PKG_PROG_PKG_CONFIG
 AC_PROG_CXX
 AC_PROG_CC
 
-# define version in config.h
+dnl define version in config.h
 AC_DEFINE_UNQUOTED([PDFTOEDN_VERSION], ["pdftoedn_version"], [Explicitly named version])
 
-# c++-11 is required
+dnl c++-11 is required
 AX_CXX_COMPILE_STDCXX_11
 
-# -----------------------------------------------
-# Checks for C libraries
+dnl -----------------------------------------------
+dnl Checks for C libraries
 AC_LANG_PUSH(C)
 dnl freetype
-PKG_CHECK_MODULES([freetype2], freetype2,
-                  [], [freetype2 was not found])
+PKG_CHECK_MODULES([freetype2], freetype2, [], [AC_MSG_ERROR([freetype2 was not found])])
 
 dnl libpng
 PKG_CHECK_MODULES([png], [libpng], libpng_ok=yes, libpng_ok=no)
@@ -48,8 +47,7 @@ else
 fi
 
 dnl leptonica
-PKG_CHECK_MODULES([lept], lept,
-                  [], [leptonica was not found])
+PKG_CHECK_MODULES([lept], lept, [], [AC_MSG_ERROR([leptonica was not found])])
 
 dnl openssl
 AX_CHECK_OPENSSL(openssl_found=yes, openssl_found=no)
@@ -57,7 +55,6 @@ AX_CHECK_OPENSSL(openssl_found=yes, openssl_found=no)
 if test "x$openssl_found" = "xyes"; then
    AC_DEFINE([HAVE_LIBOPENSSL], [1], [using openssl md5])
 else
-#   AC_DEFINE([HAVE_LIBOPENSSL], [0], [using local md5])
    AC_MSG_NOTICE([
  openssl not found - using local md5 calculation code
 
@@ -73,8 +70,8 @@ AM_CONDITIONAL([LOCAL_MD5], [test x$openssl_found = xno])
 
 AC_LANG_POP
 
-# -----------------------------------------------
-# Checks for c++ libraries.
+dnl -----------------------------------------------
+dnl Checks for c++ libraries.
 AC_LANG_PUSH(C++)
 
 dnl boost
@@ -85,14 +82,14 @@ AX_BOOST_PROGRAM_OPTIONS
 AX_BOOST_REGEX
 AX_BOOST_LOCALE
 
-# poppler
-PKG_CHECK_MODULES([poppler], [poppler >= 0.45.0])
-PKG_CHECK_MODULES([poppler_cpp], [poppler-cpp >= 0.45.0])
+dnl poppler
+PKG_CHECK_MODULES([poppler], [poppler >= 0.45.0], [], [AC_MSG_ERROR([poppler was not found])])
+PKG_CHECK_MODULES([poppler_cpp], [poppler-cpp >= 0.45.0], [], [AC_MSG_ERROR([poppler cpp lib not found])])
 
-# poppler doesn't scope usage of its x-pdf headers but I prefer to.
-# This is usually not a problem unless poppler is installed in a
-# custom location because pkg-config usually returns the path
-# including the poppler subdirectory (e.g., /usr/some/path/include/poppler)
+dnl poppler doesn't scope usage of its x-pdf headers but I prefer to.
+dnl This is usually not a problem unless poppler is installed in a
+dnl custom location because pkg-config usually returns the path
+dnl including the poppler subdirectory (e.g., /usr/some/path/include/poppler)
 POPPLER_PARENT_INCLUDE=-I`pkg-config --variable=includedir poppler | sed 's/\/include\/poppler.*/\/include/'`
 AC_SUBST([POPPLER_PARENT_INCLUDE])
 
@@ -103,14 +100,16 @@ AC_CHECK_HEADER([GfxState.h],,[AC_MSG_ERROR([poppler headers not found. Please c
 CPPFLAGS=$save_CPPFLAGS
 
 dnl rapidjson
-PKG_CHECK_MODULES([RapidJSON], RapidJSON,
-                  [], [rapidjson was not found])
+PKG_CHECK_MODULES([RapidJSON], RapidJSON, [], [AC_MSG_ERROR([rapidjson was not found])])
+
 AC_LANG_POP
 
-# Checks for header files.
+
+dnl -----------------------------------------------
+dnl Checks for header files.
 AC_CHECK_HEADERS([unistd.h wordexp.h])
 
-# Checks for typedefs, structures, and compiler characteristics.
+dnl Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
 AC_TYPE_INT16_T
@@ -120,11 +119,16 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT8_T
 
-# Checks for library functions.
+dnl Checks for library functions.
 AC_FUNC_ERROR_AT_LINE
 AC_CHECK_FUNCS([memset setlocale strerror strstr])
 
-# tests
+dnl OS X and some BSDs don't implement open_memstream which leptonica
+dnl needs. Use a bundled implementation when this happens
+AC_CHECK_FUNC([open_memstream], open_memstream_found=yes, open_memstream_found=no)
+AM_CONDITIONAL([LOCAL_OPEN_MEMSTREAM], test x$open_memstream_found = xno)
+
+dnl tests
 AC_CONFIG_FILES([tests/Makefile])
 
 AC_OUTPUT

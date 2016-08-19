@@ -22,7 +22,7 @@
 #include <iomanip>
 #include <openssl/md5.h>
 #else
-#include "bzflag_md5.h"
+#include "external/bzflag_md5.h"
 #endif
 
 #include "graphics.h"

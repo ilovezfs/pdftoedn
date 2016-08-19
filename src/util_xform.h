@@ -23,6 +23,8 @@ namespace pdftoedn
                 XFORM_ROT_ORTH = 0x10,
                 XFORM_ROT_ARB  = 0x20,
                 XFORM_ROT      = (XFORM_ROT_ORTH | XFORM_ROT_ARB),
+
+                XFORM_ERR      = 0xff
             };
 
             bool init_transform_lib();
