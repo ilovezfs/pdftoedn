@@ -74,15 +74,15 @@ namespace pdftoedn
 
                 // check input file
                 if (!fs::exists(infile)) {
-                    std::stringstream ss;
-                    ss << infile << " does not exist" << std::endl;
-                    throw invalid_file(ss.str());
+                    std::stringstream err;
+                    err << "File " << infile << " does not exist" << std::endl;
+                    throw invalid_file(err.str());
                 }
 
                 if (!fs::is_regular_file(infile)) {
-                    std::stringstream ss;
-                    ss << infile << " is not a valid file" << std::endl;
-                    throw invalid_file(ss.str());
+                    std::stringstream err;
+                    err << infile << " is not a valid file" << std::endl;
+                    throw invalid_file(err.str());
                 }
                 return true;
             }

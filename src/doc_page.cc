@@ -876,9 +876,9 @@ namespace pdftoedn
             if (f->has_unmapped_codes() &&
                 ( !f->src()->has_std_encoding() || !f->has_to_unicode()) ) {
                 // report the warning
-                std::stringstream s;
-                s << "Font '" << f->name() << "' has custom encoding w/ unmapped codes: " << f->get_unmapped_codes_str();
-                et.log_warn(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, s.str());
+                std::stringstream warn;
+                warn << "Font '" << f->name() << "' has custom encoding w/ unmapped codes: " << f->get_unmapped_codes_str();
+                et.log_warn(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, warn.str());
             }
         }
     }

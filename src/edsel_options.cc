@@ -79,9 +79,9 @@ namespace pdftoedn {
         // check that its parent path exists
         if (!parent_path.empty()) {
             if (!fs::exists(parent_path) || !fs::is_directory(parent_path)) {
-                std::stringstream ss;
-                ss << "destination folder '" << parent_path << "' does not exist";
-                throw invalid_file(ss.str());
+                std::stringstream err;
+                err << "destination folder '" << parent_path << "' does not exist";
+                throw invalid_file(err.str());
             }
             output_path = parent_path.string();
         }
@@ -93,17 +93,17 @@ namespace pdftoedn {
             if (flags.force_output_write) {
                 // but check if it's a file that can be deleted
                 if (!fs::is_regular_file(output_filepath)) {
-                    std::stringstream ss;
-                    ss << output_filepath << " destination exists but it is not a regular file and can't be overwritten";
-                    throw invalid_file(ss.str());
+                    std::stringstream err;
+                    err << output_filepath << " destination exists but it is not a regular file and can't be overwritten";
+                    throw invalid_file(err.str());
 
                 }
                 fs::remove(output_filepath);
             } else {
                 // something exists with the name
-                std::stringstream ss;
-                ss << output_filepath << " destination file exists";
-                throw invalid_file(ss.str());
+                std::stringstream err;
+                err << output_filepath << " destination file exists";
+                throw invalid_file(err.str());
             }
         }
 
@@ -155,9 +155,9 @@ namespace pdftoedn {
 
         // but, if it exists, make sure it's a directory
         if (fs::exists(res_dir) && !fs::is_directory(res_dir)) {
-            std::stringstream ss;
-            ss << res_dir.string() << " resource path exists but is not a folder";
-            throw invalid_file(ss.str());
+            std::stringstream err;
+            err << res_dir.string() << " resource path exists but is not a folder";
+            throw invalid_file(err.str());
         }
         resource_dir = res_dir.string();
 
@@ -172,9 +172,9 @@ namespace pdftoedn {
         char* font_map_data;
         // try load the file - first read the contents
         if (!util::fs::read_text_file(new_font_map_file, &font_map_data)) {
-            std::stringstream ss;
-            ss << "Error reading specified font map file: " << new_font_map_file << std::endl;
-            throw invalid_file(ss.str());
+            std::stringstream err;
+            err << "Error reading specified font map file: " << new_font_map_file;
+            throw invalid_file(err.str());
         }
 
         // parse the JSON - throws if error

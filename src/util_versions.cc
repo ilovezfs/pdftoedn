@@ -55,9 +55,9 @@ namespace pdftoedn {
             std::string freetype(const FontEngine& fe) {
                 FT_Int ft_maj, ft_min, ft_patch;
                 FT_Library_Version(fe.ft_lib, &ft_maj, &ft_min, &ft_patch);
-                std::stringstream ss;
-                ss << ft_maj << "." << ft_min << "." <<ft_patch;
-                return ss.str();
+                std::stringstream ver;
+                ver << ft_maj << "." << ft_min << "." <<ft_patch;
+                return ver.str();
             }
 
             std::string rapidjson() {
@@ -70,14 +70,14 @@ namespace pdftoedn {
                 // create a dummy FE to get the runtime version of FT
                 FontEngine fe(NULL);
 
-                std::stringstream v;
-                v << " poppler " << poppler() << std::endl
-                  << " libpng " << libpng() << std::endl
-                  << " boost " << boost() << std::endl
-                  << " freetype " << freetype(fe) << std::endl
-                  << " leptonica " << leptonica() << std::endl
-                  << " rapidjson " << rapidjson() << std::endl;
-                return v.str();
+                std::stringstream ver;
+                ver << " poppler " << poppler() << std::endl
+                    << " libpng " << libpng() << std::endl
+                    << " boost " << boost() << std::endl
+                    << " freetype " << freetype(fe) << std::endl
+                    << " leptonica " << leptonica() << std::endl
+                    << " rapidjson " << rapidjson() << std::endl;
+                return ver.str();
             }
 
             // version EDN hash

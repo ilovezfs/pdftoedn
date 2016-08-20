@@ -278,9 +278,9 @@ namespace pdftoedn
             return CODE_REMAPPED_BY_EDSEL;
         }
 
-        std::stringstream s;
-        s << __FUNCTION__ << " encountered font '" << cur_doc_font->name() << "' that may need mappings or be exported";
-        et.log_error(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, s.str());
+        std::stringstream warn;
+        warn << __FUNCTION__ << " encountered font '" << cur_doc_font->name() << "' that may need mappings or be exported";
+        et.log_error(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, warn.str());
         unicode_r = code;
         return CODE_REMAP_ERROR;
     }

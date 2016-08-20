@@ -59,10 +59,10 @@ namespace pdftoedn
         use_page_media_box(true)
     {
         if (!isOk()) {
-            std::stringstream ss;
-            ss << "Document open error: "
+            std::stringstream err;
+            err << "Document open error: "
                << util::debug::get_poppler_doc_error_str(getErrorCode());
-            throw invalid_file(ss.str());
+            throw invalid_file(err.str());
         }
 
         // document is open and basic meta has been read. Before
@@ -70,15 +70,15 @@ namespace pdftoedn
         // check it is within range
         if (pdftoedn::options.page_number() >= 0 &&
             pdftoedn::options.page_number() >= getNumPages()) {
-            std::stringstream ss;
-            ss << "Error: requested page number " << pdftoedn::options.page_number()
-               << " is not valid (document has "
-               << getNumPages() << " page";
+            std::stringstream err;
+            err << "Error: requested page number " << pdftoedn::options.page_number()
+                << " is not valid (document has "
+                << getNumPages() << " page";
             if (getNumPages() > 1) {
-                ss << "s";
+                err << "s";
             }
-            ss << " and value must be 0-indexed)";
-            throw init_error(ss.str());
+            err << " and value must be 0-indexed)";
+            throw init_error(err.str());
         }
 
         // TESLA-6245: Mike P requested a way to extract only links
@@ -416,9 +416,9 @@ namespace pdftoedn
                     // (and adding URI link destination in case)
                     outline_action_uri( dynamic_cast<LinkURI*>(link_action), *e );
                 } else {
-                    std::stringstream s;
-                    s << "link action kind: " << link_action->getKind();
-                    et.log_warn(ErrorTracker::ERROR_UNHANDLED_LINK_ACTION, MODULE, s.str());
+                    std::stringstream err;
+                    err << "link action kind: " << link_action->getKind();
+                    et.log_warn(ErrorTracker::ERROR_UNHANDLED_LINK_ACTION, MODULE, err.str());
                 }
             }
 

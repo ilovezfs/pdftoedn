@@ -181,9 +181,9 @@ int main(int argc, char** argv)
         output.open(pdftoedn::options.edn_filename().c_str());
 
         if (!output.is_open()) {
-            std::stringstream ss;
-            ss << pdftoedn::options.edn_filename() << "Cannot open file for write";
-            throw pdftoedn::invalid_file(ss.str());
+            std::stringstream err;
+            err << pdftoedn::options.edn_filename() << "Cannot open file for write";
+            throw pdftoedn::invalid_file(err.str());
         }
 
         // write the document data

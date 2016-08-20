@@ -69,13 +69,13 @@ namespace pdftoedn
     void CodeToGIDMap::finalize()
     {
         if (c2g_map && size > 0) {
-            std::stringstream ss;
+            std::stringstream c2gseq;
 
             for (uintmax_t ii = 0; ii < size; ++ii) {
-                ss << std::hex << c2g_map[ii];
+                c2gseq << std::hex << c2g_map[ii];
             }
 
-            c2g_md5 = util::md5(ss.str());
+            c2g_md5 = util::md5(c2gseq.str());
         }
     }
 
@@ -266,10 +266,10 @@ namespace pdftoedn
     void FontSource::check_name()
     {
         if (name.empty()) {
-            std::stringstream s;
+            std::stringstream name_stream;
             // NULL font name - fabricate one using ref values to identify it
-            s << "[" << ref << "]";
-            name = s.str();
+            name_stream << "[" << ref << "]";
+            name = name_stream.str();
 
             // log an error
             std::stringstream err;

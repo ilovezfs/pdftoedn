@@ -910,9 +910,9 @@ namespace pdftoedn
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << std::boolalpha << state->getAlphaIsShape() << " ---- + " << std::endl);
 
         if (state->getAlphaIsShape()) {
-            std::stringstream s;
-            s << __FUNCTION__ << " - value: " << std::boolalpha << state->getAlphaIsShape();
-            et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, s.str() );
+            std::stringstream err;
+            err << __FUNCTION__ << " - value: " << std::boolalpha << state->getAlphaIsShape();
+            et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, err.str() );
         }
     }
 
@@ -922,9 +922,9 @@ namespace pdftoedn
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << std::boolalpha << state->getTextKnockout() << " ---- + " << std::endl);
 
-        std::stringstream s;
-        s << __FUNCTION__ << " - value: " << std::boolalpha << state->getTextKnockout();
-        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, s.str() );
+        std::stringstream err;
+        err << __FUNCTION__ << " - value: " << std::boolalpha << state->getTextKnockout();
+        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, err.str() );
     }
 
     //
@@ -1045,19 +1045,11 @@ namespace pdftoedn
     void OutputDev::markPoint(char *name)
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << name << " ---- + " << std::endl);
-
-        /*        std::stringstream s;
-        s << __FUNCTION__ << " - value: '" << name << "'";
-        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, s.str() );*/
     }
 
     void OutputDev::markPoint(char *name, Dict *properties)
     {
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": " << name << " ---- + " << std::endl);
-
-        /*        std::stringstream s;
-        s << __FUNCTION__ << " - value: '" << name << "'";
-        et.log_info( ErrorTracker::ERROR_OD_UNIMPLEMENTED_CB, MODULE, s.str() );*/
     }
 
 

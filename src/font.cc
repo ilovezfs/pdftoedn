@@ -352,27 +352,27 @@ namespace pdftoedn
     // debug
     std::string PdfFont::get_unmapped_codes_str() const
     {
-        std::stringstream rs;
+        std::stringstream codes_stream;
         if (!unmapped_codes.empty()) {
-            rs << "[ ";
+            codes_stream << "[ ";
             const Encoding *e = NULL;
 
             if (is_type1()) {
                 e = font_src->get_encoding();
             }
 
-            rs << std::hex;
+            codes_stream << std::hex;
 
             for (uint32_t c : unmapped_codes) {
-                rs << "0x" << c;
+                codes_stream << "0x" << c;
                 if (e) {
-                    rs << " (" << e->entity(c) << ")";
+                    codes_stream << " (" << e->entity(c) << ")";
                 }
-                rs << ' ';
+                codes_stream << ' ';
             }
-            rs << "]";
+            codes_stream << "]";
         }
-        return rs.str();
+        return codes_stream.str();
     }
 
     std::ostream& PdfFont::dump(std::ostream& o) const

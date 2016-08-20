@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <map>
 #include <list>
 
@@ -228,15 +229,13 @@ namespace pdftoedn
 #endif
 
                 if (d.HasParseError()) {
-                    std::stringstream ss;
-                    ss << "Fontmap JSON parse error: " << GetParseError_En(d.GetParseError());
-                    throw invalid_file(ss.str());
+                    std::stringstream err;
+                    err << "Fontmap JSON parse error: " << GetParseError_En(d.GetParseError());
+                    throw invalid_file(err.str());
                 }
 
                 if (!d.IsObject()) {
-                    std::stringstream ss;
-                    ss << "Invalid fontmap format - expecting an object at the root level";
-                    throw invalid_file(ss.str());
+                    throw invalid_file("Invalid fontmap format - expecting an object at the root level");
                 }
 
                 // parse the glyph & font maps to build the lookup
@@ -245,23 +244,17 @@ namespace pdftoedn
                 if (d.HasMember("glyphMaps")) {
                     const rapidjson::Value& glyphmaps = d["glyphMaps"];
                     if (!read_glyph_maps(glyphmaps, maps)) {
-                        std::stringstream ss;
-                        ss << "Invalid config format - error parsing glyph list";
-                        throw invalid_file(ss.str());
+                        throw invalid_file("Invalid config format - error parsing glyph list");
                     }
                 }
 
                 if (!d.HasMember("fontMaps")) {
-                    std::stringstream ss;
-                    ss << "Invalid config file - no \"fontMaps\" entry found";
-                    throw invalid_file(ss.str());
+                    throw invalid_file("Invalid config file - no \"fontMaps\" entry found");
                 }
 
                 const rapidjson::Value& fontmaps = d["fontMaps"];
                 if (!read_font_maps(fontmaps, maps)) {
-                    std::stringstream ss;
-                    ss << "Invalid config format - error parsing font map list";
-                    throw invalid_file(ss.str());
+                    throw invalid_file("Invalid config format - error parsing font map list");
                 }
                 return true;
             }

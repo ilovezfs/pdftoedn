@@ -54,9 +54,9 @@ namespace pdftoedn
                   default: break;
                 }
 
-                std::stringstream str;
-                str << "Unknown error code: " << errCode;
-                return str.str();
+                std::stringstream err;
+                err << "Unknown error code: " << errCode;
+                return err.str();
             }
 
             const char* get_poppler_error_str(ErrorCategory e)
