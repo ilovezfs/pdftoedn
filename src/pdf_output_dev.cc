@@ -490,11 +490,10 @@ namespace pdftoedn
 
             // poppler cleanup
             delete imgStr;
-            str->close();
 
             // don't continue if encode failed
             if (!encode_status ||
-                !process_image_blob(&blob, ctm, bbox, properties, width, height, ref_num)) {
+                !process_image_blob(blob, ctm, bbox, properties, width, height, ref_num)) {
                 return;
             }
 
@@ -579,12 +578,10 @@ namespace pdftoedn
             // poppler cleanup
             delete maskImgStr;
             delete imgStr;
-            maskStr->close();
-            str->close();
 
             // don't continue if encode failed
             if (!encode_status ||
-                !process_image_blob(&blob, ctm, bbox, properties, width, height,
+                !process_image_blob(blob, ctm, bbox, properties, width, height,
                                     ref_num)) {
                 return;
             }
@@ -677,12 +674,10 @@ namespace pdftoedn
             // poppler cleanup
             delete maskImgStr;
             delete imgStr;
-            maskStr->close();
-            str->close();
 
             // don't continue if encode failed
             if (!encode_status ||
-                !process_image_blob(&blob, ctm, bbox, properties, width, height,
+                !process_image_blob(blob, ctm, bbox, properties, width, height,
                                     ref_num)) {
                 return;
             }
@@ -760,10 +755,9 @@ namespace pdftoedn
 
             // poppler cleanup
             delete imgStr;
-            str->close();
 
             if (!encode_status ||
-                !process_image_blob(&blob, ctm, bbox, properties, width, height,
+                !process_image_blob(blob, ctm, bbox, properties, width, height,
                                     ref_num)) {
                 return;
             }
@@ -778,24 +772,23 @@ namespace pdftoedn
 
     //
     // transform the encoded image if needed, then cache it
-    bool OutputDev::process_image_blob(const std::ostringstream* blob, const PdfTM& ctm,
+    bool OutputDev::process_image_blob(const std::ostringstream& blob, const PdfTM& ctm,
                                        const BoundingBox& bbox, const StreamProps& properties,
                                        int width, int height,
                                        intmax_t& ref_num)
     {
+        std::string data = blob.str();
+
         // handle transformations if needed
-        std::ostringstream xformed_blob;
         if (ctm.is_transformed()) {
-            if (util::xform::transform_image(ctm, blob->str(), width, height,
-                                             properties.mask_is_inverted(),
-                                             xformed_blob) == util::xform::XFORM_NONE) {
+            if (util::xform::transform_image(ctm, data, width, height,
+                                             properties.mask_is_inverted()) == util::xform::XFORM_ERR) {
                 // don't continue if transform failed
                 return false;
             }
-            blob = &xformed_blob;
         }
 
-        std::string data_md5 = util::md5(blob->str());
+        std::string data_md5 = util::md5(data);
 
         // we've seen instances of repeated usage of inlined streams
         // so we cache them and search the cache by md5
@@ -818,7 +811,7 @@ namespace pdftoedn
 
         // cache it - cache_image()
         if (!pg_data->cache_image(ref_num, bbox, width, height, properties,
-                                  blob->str(), data_md5)) {
+                                  data, data_md5)) {
             // error caching image
             return false;
         }

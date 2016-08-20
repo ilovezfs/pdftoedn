@@ -33,11 +33,12 @@ namespace pdftoedn
             }
 
             // =======================================================================
+            // transform image data and recompute bounding box.
+            // Replaces the blob with the transformed data and returns
+            // the resulting width and height
             //
-            // transform image data and recompute bounding box
-            uint8_t transform_image(const PdfTM& image_ctm, const std::string& blob,
-                                    int& width, int& height, bool inverted_mask,
-                                    std::ostringstream& xformed_blob)
+            uint8_t transform_image(const PdfTM& image_ctm, std::string& blob,
+                                    int& width, int& height, bool inverted_mask)
             {
                 uint8_t ops = XFORM_NONE;
                 PdfTM ctm(image_ctm);
@@ -99,16 +100,18 @@ namespace pdftoedn
                         DBG_TRACE(std::cerr << angle << " deg" << std::endl);
                     }
 
+                    // cleanup
+                    pixDestroy(&p);
+
                     // check if the rotation failed
                     if (!p2) {
-                        std::stringstream s;
-                        s << "pixRotate[XX]() op failed for " << angle_d << " degrees";
-                        et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE, s.str() );
-                        pixDestroy(&p);
+                        std::stringstream err;
+                        err << "pixRotate[XX]() op failed for " << angle_d << " degrees";
+                        et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE, err.str() );
                         return XFORM_ERR;
                     }
 
-                    pixDestroy(&p);
+                    // swap
                     p = p2;
                     p2 = NULL;
                 }
@@ -170,30 +173,26 @@ namespace pdftoedn
                     ops |= ((ratio_r > 0) ? XFORM_SCALE_H : XFORM_SCALE_V);
                 }
 
-                // get the dimensions of the resulting pixmap
+                // get the dimensions of the resulting pixmap to return
                 width = pixGetWidth(p);
                 height = pixGetHeight(p);
-                int depth = pixGetDepth(p);
 
-                DBG_TRACE(std::cerr << "\tnew w: " << width << ", new h: " << height
-                          << ", depth: " << depth << std::endl;);
+                DBG_TRACE(std::cerr << "\tnew w: " << width << ", new h: " << height << std::endl;);
 
-                // write it to a PNG - TODO: optimize to directly write to disk instead
-                size_t size = width * height * depth; //blob.length();     // TODO: check size
-                l_uint8* data = new l_uint8[size];
-
-                if (pixWriteMemPng(&data, &size, p, 0) == 0) {
-                    xformed_blob.write(reinterpret_cast<const char*>(data), size);
-                }
-                else {
+                // write it to a PNG in memory
+                uint8_t* xformed_data;
+                size_t size;
+                if (pixWriteMemPng(&xformed_data, &size, p, 0) == 0) {
+                    // assign w/ move constructor
+                    blob = std::string(reinterpret_cast<const char*>(xformed_data), size);
+                    free(xformed_data);
+                } else {
                     et.log_critical( ErrorTracker::ERROR_UT_IMAGE_XFORM, MODULE,
                                      "pixWriteMemPng() failed to write PNG");
                     ops = XFORM_ERR;
                 }
 
                 // cleanup
-                delete [] data;
-
                 if (p) {
                     pixDestroy(&p);
                 }

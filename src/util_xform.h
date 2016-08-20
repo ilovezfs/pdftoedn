@@ -28,9 +28,8 @@ namespace pdftoedn
             };
 
             bool init_transform_lib();
-            uint8_t transform_image(const PdfTM& ctm, const std::string& blob,
-                                    int& width, int& height, bool inverted_mask,
-                                    std::ostringstream& xformed_blob);
+            uint8_t transform_image(const PdfTM& ctm, std::string& blob,
+                                    int& width, int& height, bool inverted_mask);
         }
     }
 }

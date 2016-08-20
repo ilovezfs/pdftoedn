@@ -170,7 +170,7 @@ namespace pdftoedn
         int inline_img_id;
 
         // non-virtual methods; helpers
-        bool process_image_blob(const std::ostringstream* blob, const PdfTM& ctm,
+        bool process_image_blob(const std::ostringstream& blob, const PdfTM& ctm,
                                 const BoundingBox& bbox, const StreamProps& properties,
                                 int width, int height,
                                 intmax_t& ref_num);
