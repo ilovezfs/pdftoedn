@@ -40,11 +40,6 @@ if LOCAL_MD5
 pdftoedn_SOURCES += external/bzflag_md5.cc
 endif
 
-if LOCAL_OPEN_MEMSTREAM
-# include http://piumarta.com/software/memstream/
-pdftoedn_SOURCES += external/memstream.c
-endif
-
 # what flags you want to pass to the C compiler & linker
 AM_CXXFLAGS = \
     $(PDFTOEDN_BUILD_CPPFLAGS) \
@@ -71,3 +66,4 @@ pdftoedn_LDADD =  \
 # got bit by a leftover config.h in the src directory so rm -f
 clean-local:
 	-rm -f config.h config.log config.status
+	-rm -rf *.dSYM

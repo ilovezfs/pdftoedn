@@ -47,7 +47,7 @@ else
 fi
 
 dnl leptonica
-PKG_CHECK_MODULES([lept], lept, [], [AC_MSG_ERROR([leptonica was not found])])
+PKG_CHECK_MODULES([lept], [lept >= 1.73], [], [AC_MSG_ERROR([leptonica 1.73 was not found])])
 
 dnl openssl
 AX_CHECK_OPENSSL(openssl_found=yes, openssl_found=no)
@@ -128,11 +128,6 @@ AC_TYPE_UINT8_T
 dnl Checks for library functions.
 AC_FUNC_ERROR_AT_LINE
 AC_CHECK_FUNCS([memset setlocale strerror strstr])
-
-dnl OS X and some BSDs don't implement open_memstream which leptonica
-dnl needs. Use a bundled implementation when this happens
-AC_CHECK_FUNC([open_memstream], open_memstream_found=yes, open_memstream_found=no)
-AM_CONDITIONAL([LOCAL_OPEN_MEMSTREAM], test x$open_memstream_found = xno)
 
 dnl tests
 AC_CONFIG_FILES([tests/Makefile])
