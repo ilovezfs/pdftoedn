@@ -25,6 +25,7 @@ pdftoedn -o output_file.edn input_file.pdf
 Refer to the [wiki](https://github.com/edporras/pdftoedn/wiki) for
 
 * more usage examples.
+* [exit error code reference](https://github.com/edporras/pdftoedn/wiki/Returned-Exit-Error-Codes).
 * [installation instructions](https://github.com/edporras/pdftoedn/wiki/Installation).
 * [output file format](https://github.com/edporras/pdftoedn/wiki/Output-Format-Description).
 * [overview of font map substitution](https://github.com/edporras/pdftoedn/wiki/Overview-of-Font-Substitution-Maps) and [sample font configuration file](https://github.com/edporras/pdftoedn/wiki/Sample-Font-Map-Configuration).
