@@ -1,6 +1,6 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-m4_define([pdftoedn_version],[0.32.2])
+m4_define([pdftoedn_version],[0.34.0])
 
 AC_PREREQ([2.68])
 AC_INIT([pdftoedn], [pdftoedn_version], [ed@motologic.com])
@@ -100,7 +100,13 @@ AC_CHECK_HEADER([GfxState.h],,[AC_MSG_ERROR([poppler headers not found. Please c
 CPPFLAGS=$save_CPPFLAGS
 
 dnl rapidjson
-PKG_CHECK_MODULES([RapidJSON], RapidJSON, [], [AC_MSG_ERROR([rapidjson was not found])])
+PKG_CHECK_MODULES([RapidJSON], RapidJSON, [], [AC_MSG_ERROR([
+rapidjson was not found
+
+If you've installed it manually, ensure the RapidJSON.pc file is also
+installed (usually in /usr/local/lib/pkgconfig/). If you've installed
+it in a custom location, set the PKG_CONFIG_PATH environment variable
+to point to the pkgconfig directory.])])
 
 AC_LANG_POP
 

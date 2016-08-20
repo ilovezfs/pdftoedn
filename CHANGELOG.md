@@ -1,5 +1,35 @@
 # Change Log
 
+## 0.34.0 - 2016-08-20
+
+### Added
+* loads of error checking & runtime safety checks.
+* now using `AX_CHECK_ENABLE_DEBUG` to set CPP flags up for
+  debug/release builds.
+* handling `~` home dir path expansion.
+* new option to pass owner or user passwords for encrypted PDFs.
+* fontmap file tests scripts for `make check`.
+
+### Changed
+* app now returns hex-code to indicate what components reported
+  errors.
+* configure now uses `pkg-config` for `rapidjson` and `leptonica`.
+* exception handling to indicate init errors opening files, etc.
+* libpng errors now reported in `:error` entries. Better error handling
+  and cleanup of various encoding methods.
+* replaced many lambda `std::for_each` loops with range-based for
+  loops to make things a bit more readable.
+* replaced old tmp-file OS X kludge for leptonica with bundled
+  open_memstream from http://piumarta.com/software/memstream/
+* improved leptonica error reporting.
+* refactored image blob encoding, transformation, and
+  caching. Simplified parameter passing to `StreamProps` constructors
+  and other calls.
+
+### Removed
+* removed `#ifdef` wrapped `EDSEL_RUBY_GEM` methods and files.
+* ruby formatting output option.
+
 ## 0.32.2 - 2016-08-12
 
 ### Added
