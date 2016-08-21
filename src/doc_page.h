@@ -70,7 +70,9 @@ namespace pdftoedn
         void push_gfx_state();
         void pop_gfx_state();
 
-        void update_line_dash(const std::list<double>& l_dash) { cur_gfx.attribs.line_dash = l_dash; }
+        // update_line_dash: pass by copy to invoke vector= w/ move
+        void update_line_dash(std::vector<double> l_dash) { cur_gfx.attribs.line_dash = l_dash; }
+        void clear_line_dash() { cur_gfx.attribs.line_dash.clear(); }
         void update_line_join(int8_t line_join) { cur_gfx.attribs.line_join = line_join; }
         void update_line_cap(int8_t line_cap) { cur_gfx.attribs.line_cap = line_cap; }
         void update_miter_limit(double miter_limit) { cur_gfx.attribs.miter_limit = miter_limit; }

@@ -2,8 +2,8 @@
 #pragma implementation
 #endif
 
-#include <list>
 #include <sstream>
+#include <vector>
 #include <assert.h>
 
 #include <poppler/Error.h>
@@ -528,7 +528,7 @@ namespace pdftoedn
         // check matrix is valid
         PdfTM ctm(state->getCTM());
         if (!ctm.is_finite()) {
-            et.log_info( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+            et.log_warn( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
                          "drawSoftMaskedImage - mask has non-finite CTM" );
             return;
         }
@@ -628,7 +628,7 @@ namespace pdftoedn
         // check matrix is valid
         PdfTM ctm(state->getCTM());
         if (!ctm.is_finite()) {
-            et.log_info( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
+            et.log_warn( ErrorTracker::ERROR_INVALID_ARGS, MODULE,
                          "drawSoftMaskedImage - mask has non-finite CTM" );
             return;
         }
@@ -831,6 +831,7 @@ namespace pdftoedn
         assert((pg_data != NULL) && "updateAll: PdfPage instance has not been allocated" );
     }
 
+
     //
     // line-dashes
     void OutputDev::updateLineDash(GfxState* state)
@@ -838,27 +839,32 @@ namespace pdftoedn
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << " ---- + " << std::endl);
 
         // line dash pattern
-        double *dashPattern;
-        int dashLength;
-        double dashStart;
-        state->getLineDash(&dashPattern, &dashLength, &dashStart);
+        double *pattern;
+        int length;
+        double d;
+        state->getLineDash(&pattern, &length, &d);
 
-        std::list<double> line_dash;
+        std::vector<double> line_dash;
+        if (length > 0)
+        {
+            line_dash.reserve(length + 1);
 
-        if (dashLength > 0) {
-            //std::cerr << __FUNCTION____
-            //<< " dash len: " << dashLength << ", start: " << dashStart << std::endl;
+            // dash phase is stored at the head
+            line_dash.push_back( d );
 
-            // dash start is stored at the head
-            line_dash.push_back( dashStart );
-
-            // followed by the pattern
-            for (intmax_t i = 0; i < dashLength; ++i) {
-                line_dash.push_back( dashPattern[i] );
+            // followed by the dash pattern - lengths have to be
+            // tranformed
+            PdfTM ctm(state->getCTM());
+            for (intmax_t i = 0; i < length; ++i) {
+                d = ctm.transform_line_width(pattern[i]);
+                line_dash.push_back( d );
             }
+            pg_data->update_line_dash(line_dash);
         }
-
-        pg_data->update_line_dash(line_dash);
+        else {
+            // dash pattern reset
+            pg_data->clear_line_dash();
+        }
     }
 
 
@@ -896,11 +902,8 @@ namespace pdftoedn
         DBG_TRACE(std::cerr << " + ---- " << __FUNCTION__ << ": SA? " << std::boolalpha << state->getStrokeAdjust()
                             << ", state LW: " << state->getLineWidth()
                             << " ---- + " << std::endl);
-        double *c = state->getCTM();
-        PdfTM ctm(c[0], c[1], c[2], c[3], 0, 0);
-        Coord p = ctm.transform(state->getLineWidth(), state->getLineWidth());
-
-        pg_data->update_line_width( std::min(std::abs(p.x), std::abs(p.y)) );
+        PdfTM ctm(state->getCTM());
+        pg_data->update_line_width( ctm.transform_line_width(state->getLineWidth()) );
     }
 
     //

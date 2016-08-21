@@ -90,7 +90,7 @@ namespace pdftoedn
         PdfTM(const double* const ctm) :
             m11(ctm[A]), m21(ctm[B]),
             m12(ctm[C]), m22(ctm[D]),
-            dx(ctm[E]), dy(ctm[F])
+            dx(ctm[E]),  dy(ctm[F])
         { }
         PdfTM(double radians, double ox, double oy);
         PdfTM(double radians, const Coord& c);
@@ -145,6 +145,10 @@ namespace pdftoedn
         }
         Coord transform_delta(const Coord& c) const {
             return transform_delta(c.x, c.y);
+        }
+        double transform_line_width(double w) const {
+            Coord p = transform_delta(w, w);
+            return std::min(std::abs(p.x), std::abs(p.y));
         }
         double rotation() const;
         double rotation_deg() const;

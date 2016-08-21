@@ -4,6 +4,7 @@
 #include <climits>
 #include <cstdlib>
 #include <list>
+#include <vector>
 #include "base_types.h"
 
 namespace pdftoedn
@@ -205,7 +206,7 @@ namespace pdftoedn
         // data
         StrokeFill stroke;
         StrokeFill fill;
-        std::list<double> line_dash;
+        std::vector<double> line_dash;
         double line_width;
         double miter_limit;
         int8_t line_cap;
