@@ -1,3 +1,4 @@
+.mso www.tmac
 .TH PDFTOEDN "1" "August 2016" "pdftoedn" "User Commands"
 .SH NAME
 pdftoedn \- manual page for pdftoedn
@@ -56,8 +57,8 @@ subdirectory named after the document's base name.
 .PP
 This man page covers basic usage of the application. For more
 information, including output format and font map configuration
-format, please refer to the online documentation:
-https://github.com/edporras/pdftoedn.
+format, please refer to the online documentation
+.URL https://github.com/edporras/pdftoedn/wiki wiki.
 .SH USAGE
 .PP
 Process the document file1.pdf:
@@ -152,7 +153,13 @@ Display this message.
 .B pdftoedn
 searches for specified font maps configuration files under the ~/.pdftoedn
 directory.
+.SH EXIT STATUS
+.B pdftoedn
+exits 0 on success and >0 if an error occurs. See
+.URL https://github.com/edporras/pdftoedn/wiki/Returned-Exit-Error-Codes Returned-Exit-Error-Codes
+for more information.
 .SH BUGS
-Please report all issues via https://github.com/edporras/pdftoedn/issues.
+Please report all issues via
+.URL https://github.com/edporras/pdftoedn/issues github .
 .SH AUTHOR
 Ed Porras. Based on an initial implementation by Jack Rusher.

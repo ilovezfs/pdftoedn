@@ -1,5 +1,22 @@
 # Change Log
 
+## 0.34.1 - 2016-08-22
+
+Last minute commits that should have been included in 0.34.0:
+
+### Changed
+* corrected use of `pixWriteMemPng()` to avoid memory leak.
+* changed logic to prevent additional copy of encoded and transformed
+  blobs
+* fix for incorrect dash lines (transformation is required)
+* renamed string stream identifiers for consistency and clarity
+
+### Removed
+* `memstream` handling since it's not used afterall - `leptonica` now
+  handles tmp file creation on systems that don't provided
+  `open_memstream` support. Will approach Dan to see if he's open to
+  integrating the solution into his source to avoid file creation.
+
 ## 0.34.0 - 2016-08-20
 
 ### Added
