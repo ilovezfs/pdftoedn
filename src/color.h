@@ -16,7 +16,7 @@
 
 namespace pdftoedn
 {
-    typedef int color_comp_t;
+    typedef uint32_t color_comp_t;
 
     // ----------------------------------
     //
