@@ -31,7 +31,9 @@ namespace pdftoedn
         PDFReader();
         virtual ~PDFReader() { delete eng_odev; }
 
+#ifdef FE_PREPROCESS_TEXT
         bool pre_process_fonts();
+#endif
         std::ostream& process(std::ostream& o);
 
         friend std::ostream& operator<<(std::ostream& o, PDFReader& doc) {

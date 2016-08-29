@@ -11,7 +11,7 @@
 #include "pdf_reader.h"
 #include "pdf_output_dev.h"
 #include "link_output_dev.h"
-#include "font_engine.h"
+#include "font_engine_dev.h"
 #include "pdf_doc_outline.h"
 #include "doc_page.h"
 #include "edsel_options.h"
@@ -88,13 +88,14 @@ namespace pdftoedn
             eng_odev = new pdftoedn::LinkOutputDev(getCatalog());
         }
         else {
+#ifdef FE_PREPROCESS_TEXT
             // pre-process the doc to extract fonts first. Needed
             // if additional font data needs to be included in the
             // meta before pages are parsed
             if (pdftoedn::options.force_pre_process_fonts()) {
                 pre_process_fonts();
             }
-
+#endif
             eng_odev = new pdftoedn::OutputDev(getCatalog(), font_engine);
 
             // use page crop box if requested (page media box is the default)
@@ -109,7 +110,7 @@ namespace pdftoedn
         }
     }
 
-
+#ifdef FE_PREPROCESS_TEXT
     //
     // use a custom OutputDev to only read fonts from the doc
     bool PDFReader::pre_process_fonts()
@@ -144,7 +145,7 @@ namespace pdftoedn
 #endif
         return true;
     }
-
+#endif
 
     //
     // document meta output in EDN format

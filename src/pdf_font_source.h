@@ -234,16 +234,12 @@ namespace pdftoedn
 
         void check_name();
         bool load_font(GfxFont* gfx_font);
+
         bool load_face();
         bool load_type1_font(Gfx8BitFont* gfx8_font);
         bool load_truetype_font(Gfx8BitFont* gfx8_font);
         bool load_cid_font(GfxCIDFont * cid_font);
         bool load_cidtype2_font(GfxCIDFont * cid_font);
-
-        static int glyph_path_move_to(const FT_Vector *pt, void *arg);
-        static int glyph_path_line_to(const FT_Vector *pt, void *path);
-        static int glyph_path_conic_to(const FT_Vector *ctrl, const FT_Vector *pt, void *path);
-        static int glyph_path_cubic_to(const FT_Vector *ctrl1, const FT_Vector *ctrl2, const FT_Vector *pt, void *path);
 
         static Encoding* get_font_encoding(Gfx8BitFont* gfx_font);
         static bool check_for_mac_roman_encoding(GfxFont *);

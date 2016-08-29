@@ -11,6 +11,7 @@ pdftoedn_SOURCES = \
 	eng_output_dev.cc \
 	font.cc \
 	font_engine.cc \
+	font_engine_dev.cc \
 	font_maps.cc \
 	graphics.cc \
 	image.cc \

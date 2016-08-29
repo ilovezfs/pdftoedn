@@ -1,6 +1,5 @@
 #include <iomanip>
 #include <fstream>
-#include <vector>
 #include <string>
 
 #include <poppler/GfxFont.h>
@@ -284,67 +283,5 @@ namespace pdftoedn
         unicode_r = code;
         return CODE_REMAP_ERROR;
     }
-
-
-    //------------------------------------------------------------------------
-    // FontEngine Device - for preprocessing doc and extrating font data
-    //
-    void FontEngDev::updateFont(GfxState *state)
-    {
-        GfxFont *gfx_font = state->getFont();
-        if (!gfx_font) {
-            return;
-        }
-
-        // sanity-check the font size - skip anything larger than 10 inches
-        // (this avoids problems allocating memory for the font cache)
-        if (EngOutputDev::state_font_size_not_sane(state)) {
-            return;
-        }
-
-        //        std::cerr << __FUNCTION__ << " - loading font " << gfx_font->getName()->getCString() << ", type: " << util::debug::get_font_type_str(gfx_font->getType()) << std::endl;
-
-        // load / update the current font
-        cur_font = font_engine.load_font(gfx_font);
-
-        if (cur_font) {
-            // track the usage of this font size
-            font_engine.track_font_size(EngOutputDev::get_transformed_font_size(state));
-        }
-    }
-
-
-#ifdef FE_PREPROCESS_TEXT
-    void FontEngDev::drawChar(GfxState *state, double x, double y,
-                              double dx, double dy,
-                              double originX, double originY,
-                              CharCode code, int nBytes, Unicode *u, int uLen)
-    {
-        if (!cur_font) {
-            return;
-        }
-
-        // if this is not an embedded font, don't bother with any look up tables, etc.
-        if (!cur_font->is_embedded() && !cur_font->is_cid()) {
-            return;
-        }
-
-        // if there's no toUnicode entry
-        if (!cur_font->has_to_unicode()) {
-
-            if (!cur_font->is_code_used(code)) {
-                // TODO: render glyph & compare
-                PdfPath path;
-                if (cur_font->get_glyph_path(code, path)) {
-                    // if not whitespace
-                    if (path.length() > 0) {
-                        // mark the code as used for this font
-                        cur_font->mark_code_used(code);
-                    }
-                }
-            }
-        }
-    }
-#endif // FE_PREPROCESS_TEXT
 
 } // namespace

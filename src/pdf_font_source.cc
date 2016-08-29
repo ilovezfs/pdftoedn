@@ -479,7 +479,7 @@ namespace pdftoedn
 
 
     // =============================================================================
-    // glyph loading
+    // glyph loading via FreeType
     //
     struct FEPathBuilder
     {
@@ -492,7 +492,7 @@ namespace pdftoedn
         bool needs_close;
     };
 
-    int FontSource::glyph_path_move_to(const FT_Vector *pt, void *arg)
+    static int glyph_path_move_to(const FT_Vector *pt, void *arg)
     {
         FEPathBuilder *pb = static_cast<FEPathBuilder *>(arg);
 
@@ -505,7 +505,7 @@ namespace pdftoedn
         return 0;
     }
 
-    int FontSource::glyph_path_line_to(const FT_Vector *pt, void *arg)
+    static int glyph_path_line_to(const FT_Vector *pt, void *arg)
     {
         FEPathBuilder *pb = static_cast<FEPathBuilder *>(arg);
 
@@ -515,7 +515,8 @@ namespace pdftoedn
         return 0;
     }
 
-    int FontSource::glyph_path_conic_to(const FT_Vector *ctrl, const FT_Vector *pt, void *arg)
+    static int glyph_path_conic_to(const FT_Vector *ctrl, const FT_Vector *pt,
+                                   void *arg)
     {
         FEPathBuilder *pb = static_cast<FEPathBuilder *>(arg);
         Coord p0;
@@ -535,8 +536,8 @@ namespace pdftoedn
         return 0;
     }
 
-    int FontSource::glyph_path_cubic_to(const FT_Vector *ctrl1, const FT_Vector *ctrl2,
-                                        const FT_Vector *pt, void *arg)
+    static int glyph_path_cubic_to(const FT_Vector *ctrl1, const FT_Vector *ctrl2,
+                                   const FT_Vector *pt, void *arg)
     {
         FEPathBuilder *pb = static_cast<FEPathBuilder *>(arg);
 
@@ -552,12 +553,13 @@ namespace pdftoedn
     //
     // use FreeType to look up the character's glyph; then decompose
     // it into a PdfPath sequence of commands
-    bool FontSource::get_glyph_path(CharCode code, PdfPath& path, const PdfTM* tm) const {
+    bool FontSource::get_glyph_path(CharCode code, PdfPath& path, const PdfTM* tm) const
+    {
         static FT_Outline_Funcs outlineFuncs = {
-            &FontSource::glyph_path_move_to,
-            &FontSource::glyph_path_line_to,
-            &FontSource::glyph_path_conic_to,
-            &FontSource::glyph_path_cubic_to,
+            &glyph_path_move_to,
+            &glyph_path_line_to,
+            &glyph_path_conic_to,
+            &glyph_path_cubic_to,
             0, 0
         };
 
@@ -583,7 +585,7 @@ namespace pdftoedn
         } else {
             gid = static_cast<FT_UInt>(code);
         }
-        if (FT_Load_Glyph(ft_face, gid, FT_LOAD_DEFAULT/* | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP*/)) {
+        if (FT_Load_Glyph(ft_face, gid, FT_LOAD_DEFAULT | FT_LOAD_NO_HINTING | FT_LOAD_IGNORE_GLOBAL_ADVANCE_WIDTH | FT_LOAD_NO_SCALE/*| FT_LOAD_NO_BITMAP*/)) {
             std::stringstream err;
             err << __FUNCTION__ << " - failed to load glyph for font " << name << ", code " << code;
             et.log_warn( ErrorTracker::ERROR_FE_FONT_FT, MODULE, err.str() );
