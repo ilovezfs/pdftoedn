@@ -105,7 +105,7 @@ int main(int argc, char** argv)
             if ( vm.count("version") ) {
                 std::cout << boost::filesystem::basename(argv[0]) << " "
                           << PDFTOEDN_VERSION << std::endl
-                          << "Linked libraries: " << std::endl
+                          << "Linked libraries:" << std::endl
                           << pdftoedn::util::version::info();
                 return pdftoedn::ErrorTracker::CODE_RUNTIME_OK;
             }

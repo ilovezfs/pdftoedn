@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <string>
 #include <sstream>
+#include <regex>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -13,6 +14,10 @@
 #include FT_FREETYPE_H
 #include <poppler/cpp/poppler-version.h>
 #include <rapidjson/rapidjson.h>
+
+#ifdef HAVE_LIBOPENSSL
+#include <openssl/crypto.h>
+#endif
 
 #include "font_engine.h"
 #include "util_versions.h"
@@ -77,6 +82,24 @@ namespace pdftoedn {
                     << " freetype " << freetype(fe) << std::endl
                     << " leptonica " << leptonica() << std::endl
                     << " rapidjson " << rapidjson() << std::endl;
+
+#ifdef HAVE_LIBOPENSSL
+                {
+                    std::string v;
+                    std::smatch match;
+
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+                    v = OpenSSL_version(0);
+#else
+                    v = SSLeay_version(0);
+#endif
+
+                    if (std::regex_search(v, match, std::regex("[0-9]+.[0-9]+.[0-9]+(^ )?"))) {
+                        ver << " openssl " << match[0] << std::endl;
+                    }
+                }
+#endif
+
                 return ver.str();
             }
 
