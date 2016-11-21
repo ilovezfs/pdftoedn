@@ -110,11 +110,16 @@ namespace pdftoedn
               // different line?
               (std::abs(prev.top() - top()) > 0.001) ||
               (
-               // if there's a gap, only break it up if they're both not whitespace
-               ((bbox_delta > min_ws_space) && (!prev.is_space() && !is_space())) ||
-               // or if it's a large gap, split it
-               ( bbox_delta > max_space )
-               ))
+               // attribs comparison included link index but, if it's
+               // set (!= -1), then don't break up the span since it's
+               // on the same line
+               ((attribs.txt.link_idx == -1) &&
+                // if there's a gap, only break it up if they're both not whitespace
+                (((bbox_delta > min_ws_space) && (!prev.is_space() && !is_space())) ||
+                 // or if it's a large gap, split it
+                 ( bbox_delta > max_space )
+                ))
+              ))
              ) {
             return false;
         }
