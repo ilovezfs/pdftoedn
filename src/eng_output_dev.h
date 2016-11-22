@@ -4,6 +4,7 @@
 
 #include <poppler/OutputDev.h>
 #include <poppler/GfxState.h>
+#include <poppler/Link.h>
 
 namespace pdftoedn
 {
@@ -37,6 +38,7 @@ namespace pdftoedn
 
         void process_page_links(int page_num);
         void create_annot_link(AnnotLink *link);
+        uintmax_t get_dest_goto_page(LinkDest* dest) const;
     };
 
 } // namespace

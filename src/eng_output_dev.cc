@@ -98,17 +98,7 @@ namespace pdftoedn
                       dest_file = ha->getNamedDest()->getCString();
                   }
 
-                  int page = -1;
-                  if (dest) {
-
-                      if (dest->isPageRef()){
-                          Ref pageref = dest->getPageRef();
-                          page = catalog->findPage(pageref.num, pageref.gen);
-                      }
-                      else {
-                          page = dest->getPageNum();
-                      }
-                  }
+                  int page = (dest ? get_dest_goto_page(dest) : -1);
 
                   pdf_link = new PdfAnnotLinkGoto(x1, y1, x2, y2, effect, page, dest_file);
               }
@@ -181,6 +171,19 @@ namespace pdftoedn
 
             pg_data->new_annot_link(pdf_link);
         }
+    }
+
+
+    //
+    // retrieve the page number from a link actionGoto type
+    uintmax_t EngOutputDev::get_dest_goto_page(LinkDest* dest) const
+    {
+        if (dest->isPageRef()){
+            Ref pageref = dest->getPageRef();
+            return catalog->findPage(pageref.num, pageref.gen);
+        }
+
+        return dest->getPageNum();
     }
 
 } // namespace
