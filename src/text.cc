@@ -71,8 +71,6 @@ namespace pdftoedn
         }
 
         double bbox_delta = left() - prev.right();
-        double min_ws_space = 0.2 * scaling;
-
         if (ctm.rotation_deg() == 90) {
             // TESLA-7613: when text is rotated by 90, left -
             // prev.right results in a negative value due to inverted
@@ -80,49 +78,47 @@ namespace pdftoedn
             bbox_delta = std::abs(bbox_delta);
         }
 
-#if 0 // you don't really want to enable this
-        cerr << " ----------------- comparing spans -------------- " << endl
-             << " a: " << prev << endl
-             << " b: " << *this << endl;
-
-        cerr << boolalpha
-             << "   rotated orth? " << (ctm.is_rotation_orthogonal()) << " (deg: " << ctm.rotation_deg() << ")" << endl
-             << "   glyph idx is -1? " << ((int) glyph_idx == -1) << endl
-             << "   attribs are equal? " <<  (attribs == prev.attribs) << endl
-             << "   font_size equal? " <<  (attribs.font_size == prev.attribs.font_size) << " (font size: " << attribs.font_size << ")" <<  endl
-             << "   top delta check: < 0.001: "
-             << (std::abs(prev.top() - top()   )   < 0.001) << endl
-             << "   left vs. prev right delta ("
-             << bbox_delta
-             << ") : < 0.2 * attribs.font_size * horiz_scaling (" << min_ws_space << ") ? "
-             << (bbox_delta < min_ws_space) << endl
-             << "  prev is space? " << prev.is_space() << ", cur is space? " << is_space()
-             << endl;
-#endif
-
         // if we're dealing with a glyph, or text attributes are not
         // equal or the position delta is not within some magic
         // numbers, it is not spannable
-        if ( (glyph_idx != -1) ||
-             (attribs != prev.attribs) ||
-             (ctm.rotation() != prev.ctm.rotation()) ||
-             (
-              // different line?
-              (std::abs(prev.top() - top()) > 0.001) ||
-              (
-               // attribs comparison included link index but, if it's
-               // set (!= -1), then don't break up the span since it's
-               // on the same line
-               ((attribs.txt.link_idx == -1) &&
-                // if there's a gap, only break it up if they're both not whitespace
-                (((bbox_delta > min_ws_space) && (!prev.is_space() && !is_space())) ||
-                 // or if it's a large gap, split it
-                 ( bbox_delta > max_space )
-                ))
-              ))
-             ) {
+        if (glyph_idx != -1) {
             return false;
         }
+
+        // different line?
+        if (std::abs(prev.top() - top()) > 0.001) {
+            return false;
+        }
+
+        // different rotation?
+        if (ctm.rotation() != prev.ctm.rotation()) {
+            return false;
+        }
+
+        // attributes match?
+        if (attribs != prev.attribs) {
+            return false;
+        }
+
+        double min_ws_space = 0.2 * scaling;
+
+        // attribs comparison included link index but, if it's
+        // set (!= -1), then don't break up the span since it's
+        // on the same line
+        if ((attribs.txt.link_idx == -1) &&
+            // if there's a gap, only break it up if they're both not whitespace
+            (((bbox_delta > min_ws_space) && (!prev.is_space() && !is_space())) ||
+             // or if it's a large gap, split it
+             ( bbox_delta > max_space )
+                )) {
+            return false;
+        } else {
+            // it's in a link - split only if space looks too big
+            if ( bbox_delta > max_space ) {
+                return false;
+            }
+        }
+
         return true;
     }
 
