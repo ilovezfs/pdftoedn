@@ -98,7 +98,7 @@ int main(int argc, char** argv)
             po::store(po::command_line_parser(argc, argv).options(opts).positional(p).run(), vm);
 
             if ( vm.count("help") ) {
-                std::cout << "Usage: " << boost::filesystem::basename(argv[0]) << " [options] -o <output directory> filename" << std::endl
+                std::cout << "Usage: " << boost::filesystem::basename(argv[0]) << " [options] -o <output file> filename" << std::endl
                           << opts << std::endl;
                 return pdftoedn::ErrorTracker::CODE_RUNTIME_OK;
             }
