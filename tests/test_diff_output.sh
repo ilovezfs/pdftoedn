@@ -50,8 +50,11 @@ do
 
     $RM t1.tmp
     if [ $status -ne 0 ]; then
-        echo " -> File output did not match reference output"
+        echo " -> File output for $SRCPDF did not match reference output $REFEDN"
+        break
     fi
+
+    echo
 done
 
 test_end
