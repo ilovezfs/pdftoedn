@@ -1,6 +1,6 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-m4_define([pdftoedn_version],[0.34.1])
+m4_define([pdftoedn_version],[0.34.2])
 
 AC_PREREQ([2.68])
 AC_INIT([pdftoedn], [pdftoedn_version], [ed@motologic.com])
@@ -47,7 +47,7 @@ else
 fi
 
 dnl leptonica
-PKG_CHECK_MODULES([lept], [lept >= 1.73], [], [AC_MSG_ERROR([leptonica 1.73 was not found])])
+PKG_CHECK_MODULES([lept], [lept >= 1.74], [], [AC_MSG_ERROR([leptonica 1.74 was not found])])
 
 dnl openssl
 AX_CHECK_OPENSSL(openssl_found=yes, openssl_found=no)
@@ -83,8 +83,8 @@ AX_BOOST_REGEX
 AX_BOOST_LOCALE
 
 dnl poppler
-PKG_CHECK_MODULES([poppler], [poppler >= 0.45.0], [], [AC_MSG_ERROR([poppler was not found])])
-PKG_CHECK_MODULES([poppler_cpp], [poppler-cpp >= 0.45.0], [], [AC_MSG_ERROR([poppler cpp lib not found])])
+PKG_CHECK_MODULES([poppler], [poppler >= 0.55.0], [], [AC_MSG_ERROR([poppler 0.55.0 was not found])])
+PKG_CHECK_MODULES([poppler_cpp], [poppler-cpp >= 0.55.0], [], [AC_MSG_ERROR([poppler cpp lib 0.55.0 not found])])
 
 dnl poppler doesn't scope usage of its x-pdf headers but I prefer to.
 dnl This is usually not a problem unless poppler is installed in a

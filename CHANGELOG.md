@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.34.2
+
+### Changed
+* try not to break up text spans when inside a link
+* refactoring of various internal methods
+* minor corrections and updates to usage/lib output
+* dependency version bumps
+* corrected license information
+
 ## 0.34.1 - 2016-08-22
 
 Last minute commits that should have been included in 0.34.0:
