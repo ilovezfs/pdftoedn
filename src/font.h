@@ -41,7 +41,7 @@ namespace pdftoedn
         PdfFont(FontSource* const font_source, const FontData* const fnt_data);
         ~PdfFont();
 
-        const std::string& name() const { return font_src->font_name(); }
+        const std::string& name() const { return utf_font_name; }
         const std::string& family() const { return font_data->output_font(); }
         const FontSource* src() const { return font_src; }
 
@@ -92,6 +92,7 @@ namespace pdftoedn
         void clear_unmapped_codes() const { unmapped_codes.clear(); }
 
     private:
+        std::string utf_font_name;
         FontSource* font_src;
         const FontData* font_data;
         bool bold;

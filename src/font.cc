@@ -65,6 +65,7 @@ namespace pdftoedn
     //
 
     PdfFont::PdfFont(FontSource* const font_source, const FontData* const fnt_data) :
+        utf_font_name(util::string_to_utf(font_source->font_name())),
         font_src(font_source), font_data(fnt_data),
         bold(font_data->is_bold()), italic(font_data->is_italic())
     {
@@ -221,7 +222,7 @@ namespace pdftoedn
             if (code > 0x21) {
                 err << ", '" << (char) code << "'";
             }
-            err << ") in font " << font_src->font_name();
+            err << ") in font " << utf_font_name;
             et.log_error( ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, err.str() );
         }
         else {
@@ -247,8 +248,7 @@ namespace pdftoedn
         font_h.reserve(13);
 
         // font name
-        std::string font_name(util::string_to_utf(font_src->font_name()));
-        font_h.push( SYMBOL_ORIGINAL_NAME,                 font_name );
+        font_h.push( SYMBOL_ORIGINAL_NAME,                 utf_font_name );
         font_h.push( PdfFont::SYMBOL_FAMILY,               font_data->output_font() );
 
         // family type
@@ -345,14 +345,14 @@ namespace pdftoedn
                     warn_a.push( SYMBOL_HAS_UNMAPPED_GLYPHS );
 
                     std::stringstream err;
-                    err << "Font '" << font_name << "' has unmapped codes";
+                    err << "Font '" << utf_font_name << "' has unmapped codes";
                     pdftoedn::et.log_warn(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, err.str());
                 }
             } else if (!font_src->has_to_unicode()) {
                 warn_a.push( SYMBOL_NO_UNICODE_MAP );
 
                 std::stringstream err;
-                err << "No subst map for '" << font_name << "'";
+                err << "No subst map for '" << utf_font_name << "'";
                 pdftoedn::et.log_warn(ErrorTracker::ERROR_FE_FONT_MAPPING, MODULE, err.str());
             }
 
@@ -400,7 +400,7 @@ namespace pdftoedn
           << (font_data->is_bold() ? "Bold " : "")
           << (font_data->is_italic() ? "Italic " : "")
           << ", type: " << type_str()
-          << " - (original: " << font_src->font_name() << ")";
+          << " - (original: " << utf_font_name << ")";
         return o;
     }
 
