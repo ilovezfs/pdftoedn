@@ -368,7 +368,6 @@ namespace pdftoedn
 
             // compute rotated bbox dimensions
             Coord p2p = hctm.transform(char_props.x, -char_props.y);
-            BoundingBox bboxp(bbox.p1(), p2p);
 
             // determine origin for SVG
             Coord origin(bbox.x1(), bbox.y2());
@@ -428,7 +427,7 @@ namespace pdftoedn
 
             text_h.push( PdfBoxedItem::SYMBOL_ROTATION, ctm.rotation_deg() );
             text_h.push( PdfText::SYMBOL_ORIGIN, origin );
-            text_h.push( BoundingBox::SYMBOL, bboxp );
+            text_h.push( BoundingBox::SYMBOL, BoundingBox(bbox.p1(), p2p) );
 
             util::edn::Vector transforms_v(transforms.size());
             text_h.push( PdfBoxedItem::SYMBOL_XFORM, Transform::list_to_edn(transforms, transforms_v) );
