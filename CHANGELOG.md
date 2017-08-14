@@ -1,6 +1,14 @@
 # Change Log
 
-## 0.34.2
+## 0.34.3 - 2017-08-14
+
+### Fixed
+* segfault on homebrew builds due to variable optimization.
+
+### Changed
+* Updated AX_CXX_ M4 macros.
+
+## 0.34.2 - 2017-06-21
 
 ### Changed
 * try not to break up text spans when inside a link
