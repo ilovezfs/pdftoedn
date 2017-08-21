@@ -53,17 +53,14 @@ namespace pdftoedn {
             const pdftoedn::Symbol SYMBOL_LEPTONICA    = "leptonica";
             const pdftoedn::Symbol SYMBOL_RAPIDJSON    = "rapidjson";
 
-            // get versions for all libs - will include these in meta
-            // output
-            std::string poppler() { return poppler::version_string(); }
-            std::string libpng() { return png_libpng_ver; }
-            std::string boost() {
+            static std::string boost() {
                 std::string b_v = BOOST_LIB_VERSION;
                 int underscore = b_v.find('_');
                 b_v.replace(underscore, 1, ".");
                 return b_v;
-            }
-            std::string leptonica() {
+            };
+
+            static std::string leptonica() {
                 std::string l_v;
 
                 { // leptonica requires we free the version string
@@ -72,9 +69,9 @@ namespace pdftoedn {
                     free((void*) v);
                 }
 
-                int dash = l_v.find('-') + 1;
-                return l_v.substr(dash);
-            }
+                return l_v.substr( l_v.find('-') + 1 );
+            };
+
             std::string freetype(const FontEngine& fe) {
                 FT_Int ft_maj, ft_min, ft_patch;
                 FT_Library_Version(fe.ft_lib, &ft_maj, &ft_min, &ft_patch);
@@ -83,41 +80,56 @@ namespace pdftoedn {
                 return ver.str();
             }
 
-            std::string rapidjson() {
-                return RAPIDJSON_VERSION_STRING;
-            }
+#ifdef HAVE_LIBOPENSSL
+            static const std::string openssl() {
+                std::string openssl_version_str;
+                std::smatch match;
+
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+ #define OPENSSL_VERSION_FN  OpenSSL_version(0)
+#else
+ #define OPENSSL_VERSION_FN  SSLeay_version(0)
+#endif
+                openssl_version_str = OPENSSL_VERSION_FN;
+
+                try
+                {
+                    std::regex pattern("(a-zA-Z)+ ");
+                    std::regex_search(openssl_version_str, match, pattern);
+                    if (!match.empty()) {
+                        openssl_version_str = match[0];
+                    }
+                } catch (const std::exception& e) {
+                }
+                return openssl_version_str;
+            };
+#endif
+
+            // get versions for all libs - will include these in meta
+            // output
+            static const std::string PDFTOEDN_POPPLER_VERSION   = poppler::version_string();
+            static const std::string PDFTOEDN_LIBPNG_VERSION    = png_libpng_ver;
+            static const std::string PDFTOEDN_BOOST_VERSION     = boost();
+            static const std::string PDFTOEDN_LEPTONICA_VERSION = leptonica();
+            static const std::string PDFTOEDN_FREETYPE_VERSION  = freetype(NULL);
+            static const std::string PDFTOEDN_RAPIDJSON_VERSION = RAPIDJSON_VERSION_STRING;
 
             //
             // return lib version numbers
             std::string info() {
-                // create a dummy FE to get the runtime version of FT
-                FontEngine fe(NULL);
 
                 std::stringstream ver;
-                ver << " poppler " << poppler() << std::endl
-                    << " libpng " << libpng() << std::endl
-                    << " boost " << boost() << std::endl
-                    << " freetype " << freetype(fe) << std::endl
-                    << " leptonica " << leptonica() << std::endl
-                    << " rapidjson " << rapidjson() << std::endl;
+                ver << " poppler "   << PDFTOEDN_POPPLER_VERSION << std::endl
+                    << " libpng "    << PDFTOEDN_LIBPNG_VERSION << std::endl
+                    << " boost "     << PDFTOEDN_BOOST_VERSION << std::endl
+                    << " freetype "  << PDFTOEDN_FREETYPE_VERSION << std::endl
+                    << " leptonica " << PDFTOEDN_LEPTONICA_VERSION << std::endl
+                    << " rapidjson " << PDFTOEDN_RAPIDJSON_VERSION << std::endl;
 
 #ifdef HAVE_LIBOPENSSL
-                {
-                    std::string v;
-                    std::smatch match;
-
-#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
-                    v = OpenSSL_version(0);
-#else
-                    v = SSLeay_version(0);
+                ver << " openssl "   << openssl() << std::endl;
 #endif
-
-                    if (std::regex_search(v, match, std::regex("[0-9]+.[0-9]+.[0-9]+(^ )?"))) {
-                        ver << " openssl " << match[0] << std::endl;
-                    }
-                }
-#endif
-
+                
                 return ver.str();
             }
 
@@ -126,12 +138,12 @@ namespace pdftoedn {
             {
                 version_h.reserve(7);
                 version_h.push( SYMBOL_APP      , PDFTOEDN_VERSION );
-                version_h.push( SYMBOL_POPPLER  , poppler() );
-                version_h.push( SYMBOL_LIBPNG   , libpng() );
-                version_h.push( SYMBOL_BOOST    , boost() );
-                version_h.push( SYMBOL_FREETYPE , freetype(fe) );
-                version_h.push( SYMBOL_LEPTONICA, leptonica() );
-                version_h.push( SYMBOL_RAPIDJSON, rapidjson() );
+                version_h.push( SYMBOL_POPPLER  , PDFTOEDN_POPPLER_VERSION );
+                version_h.push( SYMBOL_LIBPNG   , PDFTOEDN_LIBPNG_VERSION );
+                version_h.push( SYMBOL_BOOST    , PDFTOEDN_BOOST_VERSION );
+                version_h.push( SYMBOL_FREETYPE , PDFTOEDN_FREETYPE_VERSION );
+                version_h.push( SYMBOL_LEPTONICA, PDFTOEDN_LEPTONICA_VERSION );
+                version_h.push( SYMBOL_RAPIDJSON, PDFTOEDN_RAPIDJSON_VERSION );
                 return version_h;
             }
         } // version
