@@ -26,6 +26,7 @@
 #include "util.h"
 #include "util_debug.h"
 #include "util_edn.h"
+#include "util_versions.h"
 #include "pdf_reader.h"
 #include "pdf_output_dev.h"
 #include "link_output_dev.h"
@@ -220,7 +221,7 @@ namespace pdftoedn
         }
 
         util::edn::Hash version_h;
-        meta_h.push( SYMBOL_VERSIONS                          , util::version::libs(font_engine, version_h));
+        meta_h.push( SYMBOL_VERSIONS                          , util::version::libs(version_h));
 
         // if we caught errors, include them
         if (et.errors_reported()) {

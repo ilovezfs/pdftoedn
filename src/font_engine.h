@@ -38,7 +38,6 @@
 
 #include "pdf_font_source.h"
 #include "font_maps.h"
-#include "util_versions.h"
 
 //#define FE_PREPROCESS_TEXT // collect text usage while pre-processing doc
 
@@ -99,8 +98,6 @@ namespace pdftoedn
 
         pdftoedn::PdfFont* find_font(GfxFont* gfx_font) const;
         static std::string sanitize_font_name(const std::string& name);
-
-        friend std::string util::version::freetype(const FontEngine&);
     };
 
 } // namespace

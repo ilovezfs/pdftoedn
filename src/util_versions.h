@@ -35,7 +35,7 @@ namespace pdftoedn
             uintmax_t data_format_version();
 
             std::string info();
-            util::edn::Hash& libs(const pdftoedn::FontEngine& fe, util::edn::Hash& h);
+            util::edn::Hash& libs(util::edn::Hash& h);
 
             // font engine initializes freetype so we need this kludgy crap
             std::string freetype(const pdftoedn::FontEngine&);
